@@ -709,3 +709,72 @@ html[data-theme="dark"] .topbar {
 .url-field {
   min-width: 0;
 }
+/* =========================
+   Phase 4 - Query parameters
+   ========================= */
+
+.kv-editor {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+}
+
+.kv-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.kv-editor-table {
+  display: grid;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.kv-editor-head,
+.kv-editor-row {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) minmax(0, 1fr) 110px;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem;
+}
+
+.kv-editor-head {
+  color: var(--muted);
+  background: var(--surface-soft);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.kv-editor-row + .kv-editor-row {
+  border-top: 1px solid var(--border);
+}
+
+.checkbox-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkbox-cell input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--primary);
+}
+
+@media (max-width: 820px) {
+  .kv-editor-head {
+    display: none;
+  }
+
+  .kv-editor-row {
+    grid-template-columns: 1fr;
+  }
+
+  .checkbox-cell {
+    justify-content: flex-start;
+  }
+}

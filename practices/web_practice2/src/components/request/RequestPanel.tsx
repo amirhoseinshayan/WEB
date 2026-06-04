@@ -1,6 +1,13 @@
 import { useState, type ChangeEvent } from 'react';
+import { createEmptyKeyValuePair } from '../../constants/defaults';
 import { useAppState } from '../../store/AppContext';
 import type { ApiTab, BodyMode, KeyValuePair } from '../../types/apiClient';
+import {
+  buildUrlWithQueryParams,
+  extractQueryParamsFromUrl,
+  hasQueryParams
+} from '../../utils/queryParams';
+import { KeyValueEditor } from './KeyValueEditor';
 
 type RequestPanelTab = 'params' | 'headers' | 'body';
 
@@ -59,6 +66,72 @@ function KeyValuePreview({
 export function RequestPanel({ activeTab }: RequestPanelProps) {
   const { dispatch } = useAppState();
   const [selectedTab, setSelectedTab] = useState<RequestPanelTab>('params');
+
+  function updateParams(nextParams: KeyValuePair[]) {
+    const nextUrl = buildUrlWithQueryParams(activeTab.request.url, nextParams);
+
+    dispatch({
+      type: 'UPDATE_ACTIVE_REQUEST',
+      payload: {
+        changes: {
+          params: nextParams,
+          url: nextUrl
+        }
+      }
+    });
+  }
+
+  function handleAddParam() {
+    dispatch({
+      type: 'UPDATE_ACTIVE_REQUEST',
+      payload: {
+        changes: {
+          params: [...activeTab.request.params, createEmptyKeyValuePair()]
+        }
+      }
+    });
+  }
+
+  function handleUpdateParam(
+    rowId: string,
+    changes: Partial<KeyValuePair>
+  ) {
+    const nextParams = activeTab.request.params.map((param) =>
+      param.id === rowId
+        ? {
+            ...param,
+            ...changes
+          }
+        : param
+    );
+
+    updateParams(nextParams);
+  }
+
+  function handleRemoveParam(rowId: string) {
+    const nextParams = activeTab.request.params.filter(
+      (param) => param.id !== rowId
+    );
+
+    updateParams(nextParams);
+  }
+
+  function handleClearParams() {
+    updateParams([]);
+  }
+
+  function handleImportParamsFromUrl() {
+    const importedParams = extractQueryParamsFromUrl(activeTab.request.url);
+
+    dispatch({
+      type: 'UPDATE_ACTIVE_REQUEST',
+      payload: {
+        changes: {
+          params: importedParams
+        }
+      }
+    });
+  }
 
   function handleBodyModeChange(event: ChangeEvent<HTMLSelectElement>) {
     dispatch({
@@ -119,10 +192,25 @@ export function RequestPanel({ activeTab }: RequestPanelProps) {
 
       <div className="request-panel-content">
         {selectedTab === 'params' && (
-          <KeyValuePreview
+          <KeyValueEditor
             title="Query Parameters"
+            description="Add, edit, disable, or remove query parameters. Enabled rows are reflected in the request URL automatically."
             rows={activeTab.request.params}
             emptyMessage="No query parameters yet"
+            importButtonLabel={
+              hasQueryParams(activeTab.request.url)
+                ? 'Import from URL'
+                : 'No URL Params'
+            }
+            onAddRow={handleAddParam}
+            onUpdateRow={handleUpdateParam}
+            onRemoveRow={handleRemoveParam}
+            onClearRows={handleClearParams}
+            onImportFromUrl={
+              hasQueryParams(activeTab.request.url)
+                ? handleImportParamsFromUrl
+                : undefined
+            }
           />
         )}
 
