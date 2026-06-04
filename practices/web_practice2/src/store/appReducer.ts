@@ -1,6 +1,7 @@
 import type {
   ApiTab,
   AppState,
+  HistoryItem,
   RequestConfig,
   RequestError,
   ResponseData,
@@ -10,6 +11,7 @@ import {
   createDefaultRequestConfig,
   createDefaultTab
 } from '../constants/defaults';
+import { MAX_HISTORY_ITEMS } from '../constants/storage';
 
 export type AppAction =
   | { type: 'CREATE_TAB' }
@@ -25,7 +27,19 @@ export type AppAction =
   | { type: 'SET_TAB_LOADING'; payload: { tabId: string; isLoading: boolean } }
   | { type: 'SET_TAB_RESPONSE'; payload: { tabId: string; response: ResponseData } }
   | { type: 'SET_TAB_ERROR'; payload: { tabId: string; error: RequestError | null } }
+  | { type: 'ADD_HISTORY_ITEM'; payload: { item: HistoryItem } }
+  | { type: 'REMOVE_HISTORY_ITEM'; payload: { historyItemId: string } }
+  | { type: 'CLEAR_HISTORY' }
+  | { type: 'LOAD_HISTORY_ITEM'; payload: { request: RequestConfig } }
   | { type: 'SET_THEME'; payload: { theme: ThemeMode } };
+
+function cloneRequestConfig(request: RequestConfig): RequestConfig {
+  return {
+    ...request,
+    params: request.params.map((param) => ({ ...param })),
+    headers: request.headers.map((header) => ({ ...header }))
+  };
+}
 
 function updateActiveTab(
   state: AppState,
@@ -168,6 +182,42 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         ...tab,
         response: null,
         error: action.payload.error,
+        isLoading: false
+      }));
+    }
+
+    case 'ADD_HISTORY_ITEM': {
+      return {
+        ...state,
+        history: [action.payload.item, ...state.history].slice(
+          0,
+          MAX_HISTORY_ITEMS
+        )
+      };
+    }
+
+    case 'REMOVE_HISTORY_ITEM': {
+      return {
+        ...state,
+        history: state.history.filter(
+          (item) => item.id !== action.payload.historyItemId
+        )
+      };
+    }
+
+    case 'CLEAR_HISTORY': {
+      return {
+        ...state,
+        history: []
+      };
+    }
+
+    case 'LOAD_HISTORY_ITEM': {
+      return updateActiveTab(state, (tab) => ({
+        ...tab,
+        request: cloneRequestConfig(action.payload.request),
+        response: null,
+        error: null,
         isLoading: false
       }));
     }

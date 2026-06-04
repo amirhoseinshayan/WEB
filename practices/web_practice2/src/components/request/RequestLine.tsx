@@ -1,13 +1,39 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { HTTP_METHODS } from '../../constants/http';
 import { useAppState } from '../../store/AppContext';
-import type { ApiTab, HttpMethod } from '../../types/apiClient';
+import type {
+  ApiTab,
+  HistoryItem,
+  HttpMethod,
+  RequestConfig
+} from '../../types/apiClient';
 import { normalizeFetchError, sendHttpRequest } from '../../utils/httpClient';
+import { createId } from '../../utils/id';
 import { validateRequestBody } from '../../utils/requestBody';
 import { validateRequestUrl } from '../../utils/url';
 
 interface RequestLineProps {
   activeTab: ApiTab;
+}
+
+function cloneRequestForHistory(request: RequestConfig): RequestConfig {
+  return {
+    ...request,
+    params: request.params.map((param) => ({ ...param })),
+    headers: request.headers.map((header) => ({ ...header }))
+  };
+}
+
+function createHistoryItem(
+  request: RequestConfig,
+  responseStatus: number | null
+): HistoryItem {
+  return {
+    id: createId('history'),
+    request: cloneRequestForHistory(request),
+    responseStatus,
+    createdAt: new Date().toISOString()
+  };
 }
 
 export function RequestLine({ activeTab }: RequestLineProps) {
@@ -90,6 +116,11 @@ export function RequestLine({ activeTab }: RequestLineProps) {
       return;
     }
 
+    const requestToSend: RequestConfig = {
+      ...activeTab.request,
+      url: urlResult.normalizedUrl
+    };
+
     setValidationMessage(null);
 
     dispatch({
@@ -101,16 +132,20 @@ export function RequestLine({ activeTab }: RequestLineProps) {
     });
 
     try {
-      const response = await sendHttpRequest({
-        ...activeTab.request,
-        url: urlResult.normalizedUrl
-      });
+      const response = await sendHttpRequest(requestToSend);
 
       dispatch({
         type: 'SET_TAB_RESPONSE',
         payload: {
           tabId,
           response
+        }
+      });
+
+      dispatch({
+        type: 'ADD_HISTORY_ITEM',
+        payload: {
+          item: createHistoryItem(requestToSend, response.status)
         }
       });
 
@@ -123,6 +158,13 @@ export function RequestLine({ activeTab }: RequestLineProps) {
         payload: {
           tabId,
           error: normalizeFetchError(error)
+        }
+      });
+
+      dispatch({
+        type: 'ADD_HISTORY_ITEM',
+        payload: {
+          item: createHistoryItem(requestToSend, null)
         }
       });
     }

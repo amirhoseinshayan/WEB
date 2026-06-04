@@ -1,13 +1,17 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useReducer,
   type Dispatch,
   type ReactNode
 } from 'react';
+import { STORAGE_VERSION } from '../constants/http';
+import { APP_STORAGE_KEY } from '../constants/storage';
 import { createInitialAppState } from '../constants/defaults';
-import type { AppState } from '../types/apiClient';
+import type { AppState, ThemeMode } from '../types/apiClient';
+import { loadFromStorage, saveToStorage } from '../utils/storage';
 import { appReducer, type AppAction } from './appReducer';
 
 interface AppContextValue {
@@ -21,10 +25,68 @@ interface AppProviderProps {
   children: ReactNode;
 }
 
-export function AppProvider({ children }: AppProviderProps) {
-  const [state, dispatch] = useReducer(appReducer, undefined, () =>
-    createInitialAppState()
+function isValidTheme(theme: unknown): theme is ThemeMode {
+  return theme === 'light' || theme === 'dark';
+}
+
+function sanitizeLoadedState(loadedState: AppState, fallback: AppState): AppState {
+  if (
+    !loadedState ||
+    loadedState.version !== STORAGE_VERSION ||
+    !Array.isArray(loadedState.tabs) ||
+    loadedState.tabs.length === 0
+  ) {
+    return fallback;
+  }
+
+  const activeTabExists = loadedState.tabs.some(
+    (tab) => tab.id === loadedState.activeTabId
   );
+
+  return {
+    ...fallback,
+    ...loadedState,
+    activeTabId: activeTabExists
+      ? loadedState.activeTabId
+      : loadedState.tabs[0].id,
+    tabs: loadedState.tabs.map((tab) => ({
+      ...tab,
+      // Do not keep a tab stuck in loading state after refresh.
+      isLoading: false
+    })),
+    history: Array.isArray(loadedState.history) ? loadedState.history : [],
+    collections: Array.isArray(loadedState.collections)
+      ? loadedState.collections
+      : [],
+    theme: isValidTheme(loadedState.theme) ? loadedState.theme : fallback.theme
+  };
+}
+
+function sanitizeStateForStorage(state: AppState): AppState {
+  return {
+    ...state,
+    tabs: state.tabs.map((tab) => ({
+      ...tab,
+      // Loading is a temporary runtime state.
+      isLoading: false
+    }))
+  };
+}
+
+function getInitialState(): AppState {
+  const fallback = createInitialAppState();
+  const loadedState = loadFromStorage<AppState>(APP_STORAGE_KEY, fallback);
+
+  return sanitizeLoadedState(loadedState, fallback);
+}
+
+export function AppProvider({ children }: AppProviderProps) {
+  const [state, dispatch] = useReducer(appReducer, undefined, getInitialState);
+
+  useEffect(() => {
+    // Persist app state for refresh-safe usage.
+    saveToStorage(APP_STORAGE_KEY, sanitizeStateForStorage(state));
+  }, [state]);
 
   const value = useMemo(
     () => ({
@@ -34,12 +96,7 @@ export function AppProvider({ children }: AppProviderProps) {
     [state]
   );
 
-  // Provide global app state to all child components.
-  return (
-    <AppContext.Provider value={value}>
-      {children}
-    </AppContext.Provider>
-  );
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
 export function useAppState(): AppContextValue {
