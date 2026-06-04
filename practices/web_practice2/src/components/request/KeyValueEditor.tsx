@@ -6,6 +6,8 @@ interface KeyValueEditorProps {
   description: string;
   rows: KeyValuePair[];
   emptyMessage: string;
+  keyPlaceholder?: string;
+  valuePlaceholder?: string;
   importButtonLabel?: string;
   onAddRow: () => void;
   onUpdateRow: (rowId: string, changes: Partial<KeyValuePair>) => void;
@@ -19,6 +21,8 @@ export function KeyValueEditor({
   description,
   rows,
   emptyMessage,
+  keyPlaceholder = 'key',
+  valuePlaceholder = 'value',
   importButtonLabel,
   onAddRow,
   onUpdateRow,
@@ -105,14 +109,14 @@ export function KeyValueEditor({
               <input
                 type="text"
                 value={row.key}
-                placeholder="parameter"
+                placeholder={keyPlaceholder}
                 onChange={(event) => handleKeyChange(row, event)}
               />
 
               <input
                 type="text"
                 value={row.value}
-                placeholder="value"
+                placeholder={valuePlaceholder}
                 onChange={(event) => handleValueChange(row, event)}
               />
 

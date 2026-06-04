@@ -15,54 +15,6 @@ interface RequestPanelProps {
   activeTab: ApiTab;
 }
 
-function KeyValuePreview({
-  title,
-  rows,
-  emptyMessage
-}: {
-  title: string;
-  rows: KeyValuePair[];
-  emptyMessage: string;
-}) {
-  return (
-    <div className="kv-section">
-      <div className="subsection-header">
-        <div>
-          <h3>{title}</h3>
-          <p>Key-value editor will be completed in upcoming phases.</p>
-        </div>
-
-        <button type="button" disabled>
-          Add Row
-        </button>
-      </div>
-
-      {rows.length === 0 ? (
-        <div className="empty-state">
-          <strong>{emptyMessage}</strong>
-          <span>Add, edit, and delete actions will be connected later.</span>
-        </div>
-      ) : (
-        <div className="kv-table">
-          <div className="kv-table-head">
-            <span>Enabled</span>
-            <span>Key</span>
-            <span>Value</span>
-          </div>
-
-          {rows.map((row) => (
-            <div key={row.id} className="kv-table-row">
-              <span>{row.enabled ? 'Yes' : 'No'}</span>
-              <span>{row.key}</span>
-              <span>{row.value}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function RequestPanel({ activeTab }: RequestPanelProps) {
   const { dispatch } = useAppState();
   const [selectedTab, setSelectedTab] = useState<RequestPanelTab>('params');
@@ -92,10 +44,7 @@ export function RequestPanel({ activeTab }: RequestPanelProps) {
     });
   }
 
-  function handleUpdateParam(
-    rowId: string,
-    changes: Partial<KeyValuePair>
-  ) {
+  function handleUpdateParam(rowId: string, changes: Partial<KeyValuePair>) {
     const nextParams = activeTab.request.params.map((param) =>
       param.id === rowId
         ? {
@@ -128,6 +77,63 @@ export function RequestPanel({ activeTab }: RequestPanelProps) {
       payload: {
         changes: {
           params: importedParams
+        }
+      }
+    });
+  }
+
+  function handleAddHeader() {
+    dispatch({
+      type: 'UPDATE_ACTIVE_REQUEST',
+      payload: {
+        changes: {
+          headers: [...activeTab.request.headers, createEmptyKeyValuePair()]
+        }
+      }
+    });
+  }
+
+  function handleUpdateHeader(rowId: string, changes: Partial<KeyValuePair>) {
+    const nextHeaders = activeTab.request.headers.map((header) =>
+      header.id === rowId
+        ? {
+            ...header,
+            ...changes
+          }
+        : header
+    );
+
+    dispatch({
+      type: 'UPDATE_ACTIVE_REQUEST',
+      payload: {
+        changes: {
+          headers: nextHeaders
+        }
+      }
+    });
+  }
+
+  function handleRemoveHeader(rowId: string) {
+    const nextHeaders = activeTab.request.headers.filter(
+      (header) => header.id !== rowId
+    );
+
+    dispatch({
+      type: 'UPDATE_ACTIVE_REQUEST',
+      payload: {
+        changes: {
+          headers: nextHeaders
+        }
+      }
+    });
+  }
+
+  function handleClearHeaders() {
+    dispatch({
+      type: 'UPDATE_ACTIVE_REQUEST',
+      payload: {
+        changes: {
+          headers: []
         }
       }
     });
@@ -197,6 +203,8 @@ export function RequestPanel({ activeTab }: RequestPanelProps) {
             description="Add, edit, disable, or remove query parameters. Enabled rows are reflected in the request URL automatically."
             rows={activeTab.request.params}
             emptyMessage="No query parameters yet"
+            keyPlaceholder="page"
+            valuePlaceholder="1"
             importButtonLabel={
               hasQueryParams(activeTab.request.url)
                 ? 'Import from URL'
@@ -215,10 +223,17 @@ export function RequestPanel({ activeTab }: RequestPanelProps) {
         )}
 
         {selectedTab === 'headers' && (
-          <KeyValuePreview
+          <KeyValueEditor
             title="Headers"
+            description="Add, edit, disable, or remove request headers. Enabled rows will be applied when sending the request."
             rows={activeTab.request.headers}
             emptyMessage="No headers yet"
+            keyPlaceholder="Content-Type"
+            valuePlaceholder="application/json"
+            onAddRow={handleAddHeader}
+            onUpdateRow={handleUpdateHeader}
+            onRemoveRow={handleRemoveHeader}
+            onClearRows={handleClearHeaders}
           />
         )}
 
