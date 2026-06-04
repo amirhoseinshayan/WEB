@@ -3,6 +3,7 @@ import type {
   AppState,
   RequestConfig,
   RequestError,
+  ResponseData,
   ThemeMode
 } from '../types/apiClient';
 import {
@@ -21,6 +22,9 @@ export type AppAction =
   | { type: 'RESET_ACTIVE_REQUEST' }
   | { type: 'SET_ACTIVE_ERROR'; payload: { error: RequestError | null } }
   | { type: 'CLEAR_ACTIVE_ERROR' }
+  | { type: 'SET_TAB_LOADING'; payload: { tabId: string; isLoading: boolean } }
+  | { type: 'SET_TAB_RESPONSE'; payload: { tabId: string; response: ResponseData } }
+  | { type: 'SET_TAB_ERROR'; payload: { tabId: string; error: RequestError | null } }
   | { type: 'SET_THEME'; payload: { theme: ThemeMode } };
 
 function updateActiveTab(
@@ -32,6 +36,17 @@ function updateActiveTab(
     tabs: state.tabs.map((tab) =>
       tab.id === state.activeTabId ? updater(tab) : tab
     )
+  };
+}
+
+function updateTabById(
+  state: AppState,
+  tabId: string,
+  updater: (tab: ApiTab) => ApiTab
+): AppState {
+  return {
+    ...state,
+    tabs: state.tabs.map((tab) => (tab.id === tabId ? updater(tab) : tab))
   };
 }
 
@@ -101,7 +116,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           ...tab.request,
           ...action.payload.changes
         },
-        // Clear validation errors as soon as the user edits the request.
+        // Clear validation errors when the user edits the request.
         error: tab.error?.type === 'validation' ? null : tab.error
       }));
     }
@@ -127,6 +142,33 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return updateActiveTab(state, (tab) => ({
         ...tab,
         error: null
+      }));
+    }
+
+    case 'SET_TAB_LOADING': {
+      return updateTabById(state, action.payload.tabId, (tab) => ({
+        ...tab,
+        isLoading: action.payload.isLoading,
+        error: action.payload.isLoading ? null : tab.error,
+        response: action.payload.isLoading ? null : tab.response
+      }));
+    }
+
+    case 'SET_TAB_RESPONSE': {
+      return updateTabById(state, action.payload.tabId, (tab) => ({
+        ...tab,
+        response: action.payload.response,
+        error: null,
+        isLoading: false
+      }));
+    }
+
+    case 'SET_TAB_ERROR': {
+      return updateTabById(state, action.payload.tabId, (tab) => ({
+        ...tab,
+        response: null,
+        error: action.payload.error,
+        isLoading: false
       }));
     }
 

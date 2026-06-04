@@ -2,6 +2,7 @@ import { useEffect, useState, type ChangeEvent } from 'react';
 import { HTTP_METHODS } from '../../constants/http';
 import { useAppState } from '../../store/AppContext';
 import type { ApiTab, HttpMethod } from '../../types/apiClient';
+import { normalizeFetchError, sendHttpRequest } from '../../utils/httpClient';
 import { validateRequestBody } from '../../utils/requestBody';
 import { validateRequestUrl } from '../../utils/url';
 
@@ -52,15 +53,17 @@ export function RequestLine({ activeTab }: RequestLineProps) {
     });
   }
 
-  function handleValidateRequest() {
+  async function handleSendRequest() {
+    const tabId = activeTab.id;
     const urlResult = validateRequestUrl(activeTab.request.url);
 
     if (!urlResult.isValid) {
       setValidationMessage(null);
 
       dispatch({
-        type: 'SET_ACTIVE_ERROR',
+        type: 'SET_TAB_ERROR',
         payload: {
+          tabId,
           error: urlResult.error
         }
       });
@@ -69,7 +72,7 @@ export function RequestLine({ activeTab }: RequestLineProps) {
     }
 
     const bodyError = validateRequestBody(
-      activeTab.request.method,
+      activeTab.request.body,
       activeTab.request.bodyMode
     );
 
@@ -77,8 +80,9 @@ export function RequestLine({ activeTab }: RequestLineProps) {
       setValidationMessage(null);
 
       dispatch({
-        type: 'SET_ACTIVE_ERROR',
+        type: 'SET_TAB_ERROR',
         payload: {
+          tabId,
           error: bodyError
         }
       });
@@ -86,13 +90,42 @@ export function RequestLine({ activeTab }: RequestLineProps) {
       return;
     }
 
+    setValidationMessage(null);
+
     dispatch({
-      type: 'CLEAR_ACTIVE_ERROR'
+      type: 'SET_TAB_LOADING',
+      payload: {
+        tabId,
+        isLoading: true
+      }
     });
 
-    setValidationMessage(
-      'Request configuration looks valid. HTTP sending will be implemented in the next phase.'
-    );
+    try {
+      const response = await sendHttpRequest({
+        ...activeTab.request,
+        url: urlResult.normalizedUrl
+      });
+
+      dispatch({
+        type: 'SET_TAB_RESPONSE',
+        payload: {
+          tabId,
+          response
+        }
+      });
+
+      setValidationMessage(
+        `Response received: ${response.status} ${response.statusText}`
+      );
+    } catch (error) {
+      dispatch({
+        type: 'SET_TAB_ERROR',
+        payload: {
+          tabId,
+          error: normalizeFetchError(error)
+        }
+      });
+    }
   }
 
   function handleClearRequest() {
@@ -105,7 +138,11 @@ export function RequestLine({ activeTab }: RequestLineProps) {
       <label className="field-group method-field">
         <span>Method</span>
 
-        <select value={activeTab.request.method} onChange={handleMethodChange}>
+        <select
+          value={activeTab.request.method}
+          disabled={activeTab.isLoading}
+          onChange={handleMethodChange}
+        >
           {HTTP_METHODS.map((method) => (
             <option key={method} value={method}>
               {method}
@@ -120,6 +157,7 @@ export function RequestLine({ activeTab }: RequestLineProps) {
         <input
           type="url"
           value={activeTab.request.url}
+          disabled={activeTab.isLoading}
           placeholder="https://api.example.com/users"
           onChange={handleUrlChange}
         />
@@ -142,13 +180,16 @@ export function RequestLine({ activeTab }: RequestLineProps) {
         type="button"
         className="primary-button"
         disabled={activeTab.isLoading}
-        title="This phase validates the request configuration. HTTP sending comes later."
-        onClick={handleValidateRequest}
+        onClick={handleSendRequest}
       >
-        Send
+        {activeTab.isLoading ? 'Sending...' : 'Send'}
       </button>
 
-      <button type="button" onClick={handleClearRequest}>
+      <button
+        type="button"
+        disabled={activeTab.isLoading}
+        onClick={handleClearRequest}
+      >
         Clear
       </button>
     </section>

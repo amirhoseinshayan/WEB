@@ -834,3 +834,88 @@ html[data-theme="dark"] .topbar {
     grid-template-columns: 1fr;
   }
 }
+/* =========================
+   Phase 7 - HTTP response display
+   ========================= */
+
+.status-badge.success {
+  color: var(--success);
+  background: rgba(22, 163, 74, 0.14);
+}
+
+.status-badge.error {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.status-badge.neutral {
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.response-headers {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.response-headers summary {
+  cursor: pointer;
+  padding: 0.9rem 1rem;
+  font-weight: 800;
+}
+
+.response-headers-list {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--border);
+}
+
+.response-headers-list div {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.45fr) minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+}
+
+.response-headers-list div + div {
+  border-top: 1px solid var(--border);
+}
+
+.response-headers-list span {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.response-headers-list strong {
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.response-body-block {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.response-body-heading h3 {
+  margin: 0;
+}
+
+.response-body-block pre {
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1rem;
+  background: var(--surface-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 820px) {
+  .response-headers-list div {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}
