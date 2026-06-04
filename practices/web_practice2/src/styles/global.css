@@ -682,3 +682,30 @@ html[data-theme="dark"] .topbar {
     flex: 0 0 2.7rem;
   }
 }
+/* =========================
+   Phase 3 - URL validation
+   ========================= */
+
+.field-error,
+.field-success {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.field-error {
+  color: var(--danger);
+}
+
+.field-error span {
+  display: block;
+  margin-top: 0.15rem;
+}
+
+.field-success {
+  color: var(--success);
+}
+
+.url-field {
+  min-width: 0;
+}

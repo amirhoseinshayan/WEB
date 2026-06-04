@@ -2,6 +2,7 @@ import type {
   ApiTab,
   AppState,
   RequestConfig,
+  RequestError,
   ThemeMode
 } from '../types/apiClient';
 import {
@@ -18,6 +19,8 @@ export type AppAction =
       payload: { changes: Partial<RequestConfig> };
     }
   | { type: 'RESET_ACTIVE_REQUEST' }
+  | { type: 'SET_ACTIVE_ERROR'; payload: { error: RequestError | null } }
+  | { type: 'CLEAR_ACTIVE_ERROR' }
   | { type: 'SET_THEME'; payload: { theme: ThemeMode } };
 
 function updateActiveTab(
@@ -97,7 +100,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         request: {
           ...tab.request,
           ...action.payload.changes
-        }
+        },
+        // Clear validation errors as soon as the user edits the request.
+        error: tab.error?.type === 'validation' ? null : tab.error
       }));
     }
 
@@ -108,6 +113,20 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         response: null,
         error: null,
         isLoading: false
+      }));
+    }
+
+    case 'SET_ACTIVE_ERROR': {
+      return updateActiveTab(state, (tab) => ({
+        ...tab,
+        error: action.payload.error
+      }));
+    }
+
+    case 'CLEAR_ACTIVE_ERROR': {
+      return updateActiveTab(state, (tab) => ({
+        ...tab,
+        error: null
       }));
     }
 
