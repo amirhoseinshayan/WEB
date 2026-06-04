@@ -1,10 +1,12 @@
 import type {
   ApiTab,
   AppState,
+  Collection,
   HistoryItem,
   RequestConfig,
   RequestError,
   ResponseData,
+  SavedRequest,
   ThemeMode
 } from '../types/apiClient';
 import {
@@ -31,6 +33,21 @@ export type AppAction =
   | { type: 'REMOVE_HISTORY_ITEM'; payload: { historyItemId: string } }
   | { type: 'CLEAR_HISTORY' }
   | { type: 'LOAD_HISTORY_ITEM'; payload: { request: RequestConfig } }
+  | { type: 'CREATE_COLLECTION'; payload: { collection: Collection } }
+  | {
+      type: 'RENAME_COLLECTION';
+      payload: { collectionId: string; name: string; updatedAt: string };
+    }
+  | { type: 'DELETE_COLLECTION'; payload: { collectionId: string } }
+  | {
+      type: 'ADD_REQUEST_TO_COLLECTION';
+      payload: { collectionId: string; savedRequest: SavedRequest };
+    }
+  | {
+      type: 'REMOVE_REQUEST_FROM_COLLECTION';
+      payload: { collectionId: string; savedRequestId: string; updatedAt: string };
+    }
+  | { type: 'LOAD_SAVED_REQUEST'; payload: { request: RequestConfig } }
   | { type: 'SET_THEME'; payload: { theme: ThemeMode } };
 
 function cloneRequestConfig(request: RequestConfig): RequestConfig {
@@ -213,6 +230,82 @@ export function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     case 'LOAD_HISTORY_ITEM': {
+      return updateActiveTab(state, (tab) => ({
+        ...tab,
+        request: cloneRequestConfig(action.payload.request),
+        response: null,
+        error: null,
+        isLoading: false
+      }));
+    }
+
+    case 'CREATE_COLLECTION': {
+      return {
+        ...state,
+        collections: [action.payload.collection, ...state.collections]
+      };
+    }
+
+    case 'RENAME_COLLECTION': {
+      return {
+        ...state,
+        collections: state.collections.map((collection) =>
+          collection.id === action.payload.collectionId
+            ? {
+                ...collection,
+                name: action.payload.name,
+                updatedAt: action.payload.updatedAt
+              }
+            : collection
+        )
+      };
+    }
+
+    case 'DELETE_COLLECTION': {
+      return {
+        ...state,
+        collections: state.collections.filter(
+          (collection) => collection.id !== action.payload.collectionId
+        )
+      };
+    }
+
+    case 'ADD_REQUEST_TO_COLLECTION': {
+      return {
+        ...state,
+        collections: state.collections.map((collection) =>
+          collection.id === action.payload.collectionId
+            ? {
+                ...collection,
+                requests: [
+                  action.payload.savedRequest,
+                  ...collection.requests
+                ],
+                updatedAt: action.payload.savedRequest.updatedAt
+              }
+            : collection
+        )
+      };
+    }
+
+    case 'REMOVE_REQUEST_FROM_COLLECTION': {
+      return {
+        ...state,
+        collections: state.collections.map((collection) =>
+          collection.id === action.payload.collectionId
+            ? {
+                ...collection,
+                requests: collection.requests.filter(
+                  (request) => request.id !== action.payload.savedRequestId
+                ),
+                updatedAt: action.payload.updatedAt
+              }
+            : collection
+        )
+      };
+    }
+
+    case 'LOAD_SAVED_REQUEST': {
       return updateActiveTab(state, (tab) => ({
         ...tab,
         request: cloneRequestConfig(action.payload.request),

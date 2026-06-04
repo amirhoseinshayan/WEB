@@ -1028,3 +1028,142 @@ html[data-theme="dark"] .topbar {
   margin-top: 0.85rem;
   color: var(--danger);
 }
+/* =========================
+   Phase 9 - Collections
+   ========================= */
+
+.collections-toolbar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.collections-area {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.collection-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.collection-list-item {
+  display: grid;
+  gap: 0.25rem;
+  width: 100%;
+  text-align: left;
+}
+
+.collection-list-item.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.collection-list-item span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.collection-detail {
+  display: grid;
+  gap: 0.85rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+
+.collection-detail-header {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.collection-detail-header h3 {
+  margin: 0;
+}
+
+.collection-detail-header span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.collection-detail-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+.danger-button {
+  color: var(--danger);
+}
+
+.saved-request-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.saved-request-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.3rem;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.saved-request-load {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0.8rem;
+  background: transparent;
+  text-align: left;
+}
+
+.saved-request-load:hover:not(:disabled) {
+  transform: none;
+  background: var(--surface-soft);
+}
+
+.saved-request-load strong,
+.saved-request-load small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.saved-request-load small {
+  color: var(--muted);
+}
+
+.saved-request-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.saved-request-top span {
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.saved-request-remove {
+  border: 0;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+  padding: 0;
+  color: var(--danger);
+  background: transparent;
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+.saved-request-remove:hover:not(:disabled) {
+  transform: none;
+  background: var(--danger-soft);
+}

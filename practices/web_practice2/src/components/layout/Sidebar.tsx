@@ -1,7 +1,14 @@
-import type { HistoryItem } from '../../types/apiClient';
+import { useEffect, useMemo, useState } from 'react';
+import type {
+  Collection,
+  HistoryItem,
+  RequestConfig,
+  SavedRequest
+} from '../../types/apiClient';
 import { useAppState } from '../../store/AppContext';
+import { createId } from '../../utils/id';
 
-function formatHistoryDate(value: string): string {
+function formatDate(value: string): string {
   try {
     return new Date(value).toLocaleString();
   } catch {
@@ -15,6 +22,48 @@ function getShortUrl(url: string): string {
   }
 
   return `${url.slice(0, 67)}...`;
+}
+
+function cloneRequestConfig(request: RequestConfig): RequestConfig {
+  return {
+    ...request,
+    params: request.params.map((param) => ({ ...param })),
+    headers: request.headers.map((header) => ({ ...header }))
+  };
+}
+
+function createDefaultRequestName(request: RequestConfig): string {
+  const url = request.url.trim();
+
+  if (!url) {
+    return `${request.method} Untitled Request`;
+  }
+
+  return `${request.method} ${getShortUrl(url)}`;
+}
+
+function createCollection(name: string): Collection {
+  const now = new Date().toISOString();
+
+  return {
+    id: createId('collection'),
+    name,
+    requests: [],
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+function createSavedRequest(name: string, request: RequestConfig): SavedRequest {
+  const now = new Date().toISOString();
+
+  return {
+    id: createId('saved-request'),
+    name,
+    request: cloneRequestConfig(request),
+    createdAt: now,
+    updatedAt: now
+  };
 }
 
 function HistoryStatus({ item }: { item: HistoryItem }) {
@@ -35,9 +84,125 @@ function HistoryStatus({ item }: { item: HistoryItem }) {
 
 export function Sidebar() {
   const { state, dispatch } = useAppState();
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(
+    null
+  );
 
   const activeTab =
     state.tabs.find((tab) => tab.id === state.activeTabId) ?? state.tabs[0];
+
+  const selectedCollection = useMemo(
+    () =>
+      state.collections.find(
+        (collection) => collection.id === selectedCollectionId
+      ) ?? null,
+    [selectedCollectionId, state.collections]
+  );
+
+  useEffect(() => {
+    if (state.collections.length === 0) {
+      setSelectedCollectionId(null);
+      return;
+    }
+
+    const selectedExists = state.collections.some(
+      (collection) => collection.id === selectedCollectionId
+    );
+
+    if (!selectedExists) {
+      setSelectedCollectionId(state.collections[0].id);
+    }
+  }, [selectedCollectionId, state.collections]);
+
+  function handleCreateCollection() {
+    const name = window.prompt('Collection name:', 'New Collection');
+
+    if (!name?.trim()) {
+      return;
+    }
+
+    const collection = createCollection(name.trim());
+
+    dispatch({
+      type: 'CREATE_COLLECTION',
+      payload: {
+        collection
+      }
+    });
+
+    setSelectedCollectionId(collection.id);
+  }
+
+  function handleRenameCollection(collection: Collection) {
+    const name = window.prompt('New collection name:', collection.name);
+
+    if (!name?.trim()) {
+      return;
+    }
+
+    dispatch({
+      type: 'RENAME_COLLECTION',
+      payload: {
+        collectionId: collection.id,
+        name: name.trim(),
+        updatedAt: new Date().toISOString()
+      }
+    });
+  }
+
+  function handleDeleteCollection(collection: Collection) {
+    const confirmed = window.confirm(
+      `Delete "${collection.name}" and all saved requests inside it?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    dispatch({
+      type: 'DELETE_COLLECTION',
+      payload: {
+        collectionId: collection.id
+      }
+    });
+  }
+
+  function handleSaveActiveRequest(collection: Collection) {
+    const defaultName = createDefaultRequestName(activeTab.request);
+    const name = window.prompt('Request name:', defaultName);
+
+    if (!name?.trim()) {
+      return;
+    }
+
+    dispatch({
+      type: 'ADD_REQUEST_TO_COLLECTION',
+      payload: {
+        collectionId: collection.id,
+        savedRequest: createSavedRequest(name.trim(), activeTab.request)
+      }
+    });
+  }
+
+  function handleRemoveSavedRequest(
+    collection: Collection,
+    savedRequest: SavedRequest
+  ) {
+    const confirmed = window.confirm(`Remove "${savedRequest.name}"?`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    dispatch({
+      type: 'REMOVE_REQUEST_FROM_COLLECTION',
+      payload: {
+        collectionId: collection.id,
+        savedRequestId: savedRequest.id,
+        updatedAt: new Date().toISOString()
+      }
+    });
+  }
 
   return (
     <aside className="sidebar">
@@ -51,19 +216,139 @@ export function Sidebar() {
           <span className="counter-badge">{state.collections.length}</span>
         </div>
 
-        <div className="empty-state compact">
-          <strong>No collections yet</strong>
-          <span>Collections will be implemented in a later phase.</span>
-        </div>
+        <div className="collections-toolbar">
+          <button type="button" onClick={handleCreateCollection}>
+            New Collection
+          </button>
 
-        <div className="sidebar-actions">
           <button type="button" disabled>
             Import JSON
           </button>
+
           <button type="button" disabled>
             Export JSON
           </button>
         </div>
+
+        {state.collections.length === 0 ? (
+          <div className="empty-state compact">
+            <strong>No collections yet</strong>
+            <span>Create a collection and save requests into it.</span>
+          </div>
+        ) : (
+          <div className="collections-area">
+            <div className="collection-list">
+              {state.collections.map((collection) => (
+                <button
+                  key={collection.id}
+                  type="button"
+                  className={
+                    collection.id === selectedCollectionId
+                      ? 'collection-list-item active'
+                      : 'collection-list-item'
+                  }
+                  onClick={() => setSelectedCollectionId(collection.id)}
+                >
+                  <strong>{collection.name}</strong>
+                  <span>{collection.requests.length} requests</span>
+                </button>
+              ))}
+            </div>
+
+            {selectedCollection && (
+              <div className="collection-detail">
+                <div className="collection-detail-header">
+                  <div>
+                    <h3>{selectedCollection.name}</h3>
+                    <span>
+                      Updated {formatDate(selectedCollection.updatedAt)}
+                    </span>
+                  </div>
+
+                  <div className="collection-detail-actions">
+                    <button
+                      type="button"
+                      onClick={() => handleSaveActiveRequest(selectedCollection)}
+                    >
+                      Save Current
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleRenameCollection(selectedCollection)}
+                    >
+                      Rename
+                    </button>
+
+                    <button
+                      type="button"
+                      className="danger-button"
+                      onClick={() => handleDeleteCollection(selectedCollection)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+
+                {selectedCollection.requests.length === 0 ? (
+                  <div className="empty-state compact">
+                    <strong>No saved requests</strong>
+                    <span>Use Save Current to add the active request.</span>
+                  </div>
+                ) : (
+                  <div className="saved-request-list">
+                    {selectedCollection.requests.map((savedRequest) => (
+                      <article
+                        key={savedRequest.id}
+                        className="saved-request-item"
+                      >
+                        <button
+                          type="button"
+                          className="saved-request-load"
+                          onClick={() =>
+                            dispatch({
+                              type: 'LOAD_SAVED_REQUEST',
+                              payload: {
+                                request: savedRequest.request
+                              }
+                            })
+                          }
+                        >
+                          <div className="saved-request-top">
+                            <span>{savedRequest.request.method}</span>
+                            <small>{formatDate(savedRequest.updatedAt)}</small>
+                          </div>
+
+                          <strong>{savedRequest.name}</strong>
+
+                          <small title={savedRequest.request.url}>
+                            {savedRequest.request.url
+                              ? getShortUrl(savedRequest.request.url)
+                              : 'No URL'}
+                          </small>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="saved-request-remove"
+                          aria-label="Remove saved request"
+                          onClick={() =>
+                            handleRemoveSavedRequest(
+                              selectedCollection,
+                              savedRequest
+                            )
+                          }
+                        >
+                          ×
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="sidebar-card">
@@ -109,7 +394,7 @@ export function Sidebar() {
                       {getShortUrl(item.request.url)}
                     </strong>
 
-                    <span>{formatHistoryDate(item.createdAt)}</span>
+                    <span>{formatDate(item.createdAt)}</span>
                   </button>
 
                   <button
