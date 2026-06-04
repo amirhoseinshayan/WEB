@@ -1,4 +1,3 @@
-
 # Dependencies
 node_modules/
 
@@ -26,3 +25,49 @@ Thumbs.db
 
 # VS Code settings
 .vscode/
+
+# =========================
+# Web Practice 2 - API Client
+# =========================
+
+# Dependencies
+practices/web_practice2/node_modules/
+
+# Build outputs
+practices/web_practice2/dist/
+practices/web_practice2/dist-ssr/
+
+# Logs
+practices/web_practice2/logs/
+practices/web_practice2/*.log
+practices/web_practice2/npm-debug.log*
+practices/web_practice2/yarn-debug.log*
+practices/web_practice2/yarn-error.log*
+practices/web_practice2/pnpm-debug.log*
+practices/web_practice2/lerna-debug.log*
+
+# Local environment and local config files
+practices/web_practice2/*.local
+practices/web_practice2/.env
+practices/web_practice2/.env.*
+!practices/web_practice2/.env.example
+
+# TypeScript build cache
+practices/web_practice2/*.tsbuildinfo
+
+# Vite cache
+practices/web_practice2/.vite/
+
+# ESLint cache
+practices/web_practice2/.eslintcache
+
+# Test coverage, if added later
+practices/web_practice2/coverage/
+
+# Editor and IDE files for this project
+practices/web_practice2/.idea/
+practices/web_practice2/*.suo
+practices/web_practice2/*.ntvs*
+practices/web_practice2/*.njsproj
+practices/web_practice2/*.sln
+practices/web_practice2/*.sw?
