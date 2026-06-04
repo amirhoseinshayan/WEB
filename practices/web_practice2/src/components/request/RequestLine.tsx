@@ -2,6 +2,7 @@ import { useEffect, useState, type ChangeEvent } from 'react';
 import { HTTP_METHODS } from '../../constants/http';
 import { useAppState } from '../../store/AppContext';
 import type { ApiTab, HttpMethod } from '../../types/apiClient';
+import { validateRequestBody } from '../../utils/requestBody';
 import { validateRequestUrl } from '../../utils/url';
 
 interface RequestLineProps {
@@ -15,7 +16,10 @@ export function RequestLine({ activeTab }: RequestLineProps) {
   );
 
   const validationError =
-    activeTab.error?.type === 'validation' ? activeTab.error : null;
+    activeTab.error?.type === 'validation' &&
+    (activeTab.error.field === 'url' || !activeTab.error.field)
+      ? activeTab.error
+      : null;
 
   useEffect(() => {
     // Reset local validation message when the active tab changes.
@@ -49,15 +53,33 @@ export function RequestLine({ activeTab }: RequestLineProps) {
   }
 
   function handleValidateRequest() {
-    const result = validateRequestUrl(activeTab.request.url);
+    const urlResult = validateRequestUrl(activeTab.request.url);
 
-    if (!result.isValid) {
+    if (!urlResult.isValid) {
       setValidationMessage(null);
 
       dispatch({
         type: 'SET_ACTIVE_ERROR',
         payload: {
-          error: result.error
+          error: urlResult.error
+        }
+      });
+
+      return;
+    }
+
+    const bodyError = validateRequestBody(
+      activeTab.request.method,
+      activeTab.request.bodyMode
+    );
+
+    if (bodyError) {
+      setValidationMessage(null);
+
+      dispatch({
+        type: 'SET_ACTIVE_ERROR',
+        payload: {
+          error: bodyError
         }
       });
 
@@ -69,7 +91,7 @@ export function RequestLine({ activeTab }: RequestLineProps) {
     });
 
     setValidationMessage(
-      'URL looks valid. HTTP sending will be implemented in the next phases.'
+      'Request configuration looks valid. HTTP sending will be implemented in the next phase.'
     );
   }
 
@@ -120,7 +142,7 @@ export function RequestLine({ activeTab }: RequestLineProps) {
         type="button"
         className="primary-button"
         disabled={activeTab.isLoading}
-        title="This phase validates the request URL. HTTP sending comes later."
+        title="This phase validates the request configuration. HTTP sending comes later."
         onClick={handleValidateRequest}
       >
         Send

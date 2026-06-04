@@ -15,6 +15,7 @@ export function validateRequestUrl(url: string): UrlValidationResult {
       normalizedUrl: '',
       error: {
         type: 'validation',
+        field: 'url',
         message: 'Request URL is required.',
         details: 'Please enter a URL that starts with http:// or https://.'
       }
@@ -27,6 +28,7 @@ export function validateRequestUrl(url: string): UrlValidationResult {
       normalizedUrl: trimmedUrl,
       error: {
         type: 'validation',
+        field: 'url',
         message: 'Invalid URL protocol.',
         details: 'The URL must start with http:// or https://.'
       }
@@ -42,6 +44,7 @@ export function validateRequestUrl(url: string): UrlValidationResult {
         normalizedUrl: trimmedUrl,
         error: {
           type: 'validation',
+          field: 'url',
           message: 'Unsupported URL protocol.',
           details: 'Only HTTP and HTTPS URLs are supported.'
         }
@@ -54,6 +57,7 @@ export function validateRequestUrl(url: string): UrlValidationResult {
         normalizedUrl: trimmedUrl,
         error: {
           type: 'validation',
+          field: 'url',
           message: 'Invalid URL host.',
           details: 'Please enter a valid host name.'
         }
@@ -71,6 +75,7 @@ export function validateRequestUrl(url: string): UrlValidationResult {
       normalizedUrl: trimmedUrl,
       error: {
         type: 'validation',
+        field: 'url',
         message: 'Invalid URL format.',
         details: 'Please enter a complete and valid HTTP or HTTPS URL.'
       }

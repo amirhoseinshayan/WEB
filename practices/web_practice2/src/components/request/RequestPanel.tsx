@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { createEmptyKeyValuePair } from '../../constants/defaults';
 import { useAppState } from '../../store/AppContext';
 import type { ApiTab, BodyMode, KeyValuePair } from '../../types/apiClient';
@@ -7,6 +7,12 @@ import {
   extractQueryParamsFromUrl,
   hasQueryParams
 } from '../../utils/queryParams';
+import {
+  formatJsonBody,
+  getBodyUsageMessage,
+  methodSupportsRequestBody,
+  validateRequestBody
+} from '../../utils/requestBody';
 import { KeyValueEditor } from './KeyValueEditor';
 
 type RequestPanelTab = 'params' | 'headers' | 'body';
@@ -18,6 +24,19 @@ interface RequestPanelProps {
 export function RequestPanel({ activeTab }: RequestPanelProps) {
   const { dispatch } = useAppState();
   const [selectedTab, setSelectedTab] = useState<RequestPanelTab>('params');
+  const [bodyStatusMessage, setBodyStatusMessage] = useState<string | null>(
+    null
+  );
+
+  const bodyValidationError =
+    activeTab.error?.type === 'validation' && activeTab.error.field === 'body'
+      ? activeTab.error
+      : null;
+
+  useEffect(() => {
+    // Reset local body message when the active tab changes.
+    setBodyStatusMessage(null);
+  }, [activeTab.id]);
 
   function updateParams(nextParams: KeyValuePair[]) {
     const nextUrl = buildUrlWithQueryParams(activeTab.request.url, nextParams);
@@ -140,6 +159,8 @@ export function RequestPanel({ activeTab }: RequestPanelProps) {
   }
 
   function handleBodyModeChange(event: ChangeEvent<HTMLSelectElement>) {
+    setBodyStatusMessage(null);
+
     dispatch({
       type: 'UPDATE_ACTIVE_REQUEST',
       payload: {
@@ -151,11 +172,90 @@ export function RequestPanel({ activeTab }: RequestPanelProps) {
   }
 
   function handleBodyChange(event: ChangeEvent<HTMLTextAreaElement>) {
+    setBodyStatusMessage(null);
+
     dispatch({
       type: 'UPDATE_ACTIVE_REQUEST',
       payload: {
         changes: {
           body: event.target.value
+        }
+      }
+    });
+  }
+
+  function handleValidateBody() {
+    const error = validateRequestBody(
+      activeTab.request.method,
+      activeTab.request.bodyMode
+    );
+
+    if (error) {
+      setBodyStatusMessage(null);
+
+      dispatch({
+        type: 'SET_ACTIVE_ERROR',
+        payload: {
+          error
+        }
+      });
+
+      return;
+    }
+
+    dispatch({
+      type: 'CLEAR_ACTIVE_ERROR'
+    });
+
+    setBodyStatusMessage(
+      activeTab.request.body.trim()
+        ? 'Request body looks valid.'
+        : 'Request body is empty.'
+    );
+  }
+
+  function handleFormatJsonBody() {
+    const result = formatJsonBody(activeTab.request.body);
+
+    if (result.error) {
+      setBodyStatusMessage(null);
+
+      dispatch({
+        type: 'SET_ACTIVE_ERROR',
+        payload: {
+          error: result.error
+        }
+      });
+
+      return;
+    }
+
+    dispatch({
+      type: 'UPDATE_ACTIVE_REQUEST',
+      payload: {
+        changes: {
+          body: result.formattedBody ?? ''
+        }
+      }
+    });
+
+    dispatch({
+      type: 'CLEAR_ACTIVE_ERROR'
+    });
+
+    setBodyStatusMessage(
+      result.formattedBody ? 'JSON body formatted.' : 'Request body is empty.'
+    );
+  }
+
+  function handleClearBody() {
+    setBodyStatusMessage(null);
+
+    dispatch({
+      type: 'UPDATE_ACTIVE_REQUEST',
+      payload: {
+        changes: {
+          body: ''
         }
       }
     });
@@ -242,20 +342,68 @@ export function RequestPanel({ activeTab }: RequestPanelProps) {
             <div className="subsection-header">
               <div>
                 <h3>Request Body</h3>
-                <p>Raw and JSON body input is prepared for later sending.</p>
+                <p>{getBodyUsageMessage(activeTab.request.method)}</p>
               </div>
 
-              <label className="inline-field">
-                <span>Mode</span>
-                <select
-                  value={activeTab.request.bodyMode}
-                  onChange={handleBodyModeChange}
-                >
-                  <option value="json">JSON</option>
-                  <option value="raw">Raw</option>
-                </select>
-              </label>
+              <div className="body-toolbar">
+                <label className="inline-field body-mode-field">
+                  <span>Mode</span>
+                  <select
+                    value={activeTab.request.bodyMode}
+                    onChange={handleBodyModeChange}
+                  >
+                    <option value="json">JSON</option>
+                    <option value="raw">Raw</option>
+                  </select>
+                </label>
+
+                <div className="body-actions">
+                  <button type="button" onClick={handleValidateBody}>
+                    Validate
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={activeTab.request.bodyMode !== 'json'}
+                    onClick={handleFormatJsonBody}
+                  >
+                    Format JSON
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!activeTab.request.body.trim()}
+                    onClick={handleClearBody}
+                  >
+                    Clear Body
+                  </button>
+                </div>
+              </div>
             </div>
+
+            {!methodSupportsRequestBody(activeTab.request.method) &&
+              activeTab.request.body.trim() && (
+                <div className="body-warning">
+                  <strong>Body warning</strong>
+                  <span>
+                    This method usually does not use a request body. The content
+                    is saved, but the send step may ignore it.
+                  </span>
+                </div>
+              )}
+
+            {bodyValidationError && (
+              <p className="field-error body-message">
+                {bodyValidationError.message}
+                {bodyValidationError.details && (
+                  <span>{bodyValidationError.details}</span>
+                )}
+              </p>
+            )}
+
+            {!bodyValidationError && bodyStatusMessage && (
+              <p className="field-success body-message">{bodyStatusMessage}</p>
+            )}
 
             <textarea
               value={activeTab.request.body}
@@ -264,6 +412,7 @@ export function RequestPanel({ activeTab }: RequestPanelProps) {
                   ? '{\n  "name": "John Doe"\n}'
                   : 'Write raw request body here...'
               }
+              spellCheck={false}
               onChange={handleBodyChange}
             />
           </div>

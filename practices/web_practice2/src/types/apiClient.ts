@@ -10,6 +10,13 @@ export type RequestErrorType =
   | 'server'
   | 'unknown';
 
+export type RequestErrorField =
+  | 'url'
+  | 'params'
+  | 'headers'
+  | 'body'
+  | 'request';
+
 export interface KeyValuePair {
   id: string;
   key: string;
@@ -42,6 +49,7 @@ export interface ResponseData {
 
 export interface RequestError {
   type: RequestErrorType;
+  field?: RequestErrorField;
   message: string;
   details?: string;
 }
