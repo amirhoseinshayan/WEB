@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "version": 1,
+    "exportedAt": "2026-05-01T10:00:00.000Z",
+    "app": "Notion Lite Homework Solution"
+  },
+  "preferences": {
+    "theme": "dark",
+    "sortBy": "updated-desc"
+  },
+  "folders": [
+    {
+      "id": "folder_demo_docs",
+      "name": "درس",
+      "createdAt": "2026-05-01T10:00:00.000Z",
+      "updatedAt": "2026-05-01T10:00:00.000Z"
+    }
+  ],
+  "notes": [
+    {
+      "id": "note_demo_1",
+      "title": "برنامه هفتگی",
+      "content": "# کارها\n\n- مطالعه\n- تمرین\n\n**مهم**",
+      "folderId": "folder_demo_docs",
+      "pinned": true,
+      "createdAt": "2026-05-01T10:00:00.000Z",
+      "updatedAt": "2026-05-01T10:00:00.000Z"
+    },
+    {
+      "id": "note_demo_2",
+      "title": "یادداشت آزاد",
+      "content": "متن ساده با `code` و [link](https://example.com)",
+      "folderId": null,
+      "pinned": false,
+      "createdAt": "2026-05-01T10:00:00.000Z",
+      "updatedAt": "2026-05-01T10:00:00.000Z"
+    }
+  ]
+}

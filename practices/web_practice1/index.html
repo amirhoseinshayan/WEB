@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notion Lite Homework</title>
+    <link rel="stylesheet" href="src/css/styles.css" />
+  </head>
+
+  <body>
+    <div class="app-shell">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div>
+            <p class="eyebrow">Notion Lite</p>
+            <h1>دفتر یادداشت فارسی</h1>
+          </div>
+
+          <button id="sidebarToggle" class="ghost-button mobile-only" type="button">
+            ☰
+          </button>
+        </div>
+
+        <div class="sidebar-tools" id="sidebarTools">
+          <label class="field-label" for="searchInput">جستجو</label>
+          <input
+            id="searchInput"
+            class="text-input"
+            type="search"
+            placeholder="عنوان یا محتوا..."
+            autocomplete="off"
+          />
+
+          <div class="tool-grid">
+            <div>
+              <label class="field-label" for="sortSelect">مرتب‌سازی</label>
+              <select id="sortSelect" class="select-input">
+                <option value="updated-desc">آخرین ویرایش</option>
+                <option value="created-desc">جدیدترین</option>
+                <option value="created-asc">قدیمی‌ترین</option>
+                <option value="title-asc">عنوان الفبایی</option>
+                <option value="title-desc">عنوان معکوس</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="field-label" for="themeSelect">پوسته</label>
+              <select id="themeSelect" class="select-input">
+                <option value="system">سیستمی</option>
+                <option value="light">روشن</option>
+                <option value="dark">تاریک</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="toolbar-row wrap-row">
+            <button id="newNoteButton" class="primary-button" type="button">
+              + یادداشت جدید
+            </button>
+
+            <button id="newFolderButton" class="secondary-button" type="button">
+              + پوشه جدید
+            </button>
+          </div>
+
+          <div class="toolbar-row wrap-row">
+            <button id="exportButton" class="secondary-button" type="button">
+              خروجی JSON
+            </button>
+
+            <button id="importButton" class="secondary-button" type="button">
+              ورود JSON
+            </button>
+
+            <input id="importFileInput" type="file" accept="application/json" hidden />
+          </div>
+        </div>
+
+        <div class="sidebar-sections" id="sidebarSections">
+          <section class="sidebar-section">
+            <div class="section-title-row">
+              <h2>پین شده</h2>
+              <span id="pinnedCount" class="count-chip">0</span>
+            </div>
+
+            <div id="pinnedNotesList" class="list-stack"></div>
+          </section>
+
+          <section class="sidebar-section">
+            <div class="section-title-row">
+              <h2>پوشه‌ها</h2>
+              <span id="foldersCount" class="count-chip">0</span>
+            </div>
+
+            <div id="foldersList" class="list-stack"></div>
+          </section>
+
+          <section class="sidebar-section">
+            <div class="section-title-row">
+              <h2>یادداشت‌های بدون پوشه</h2>
+              <span id="rootNotesCount" class="count-chip">0</span>
+            </div>
+
+            <div id="rootNotesList" class="list-stack"></div>
+          </section>
+        </div>
+      </aside>
+
+      <!-- Main editor -->
+      <main class="main-panel">
+        <section class="editor-card" id="editorCard">
+          <div class="editor-topbar">
+            <div class="title-block">
+              <label class="field-label" for="noteTitleInput">عنوان یادداشت</label>
+              <input
+                id="noteTitleInput"
+                class="title-input"
+                type="text"
+                placeholder="عنوان را وارد کنید"
+              />
+            </div>
+
+            <div class="meta-actions">
+              <div class="meta-field">
+                <label class="field-label" for="folderSelect">پوشه</label>
+                <select id="folderSelect" class="select-input"></select>
+              </div>
+
+              <div class="toolbar-row wrap-row align-end">
+                <button id="pinButton" class="secondary-button" type="button">
+                  📌 پین
+                </button>
+
+                <button id="deleteNoteButton" class="danger-button" type="button">
+                  حذف یادداشت
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="markdown-toolbar" id="markdownToolbar">
+            <button type="button" class="tool-button" data-action="bold">
+              <strong>B</strong>
+            </button>
+
+            <button type="button" class="tool-button" data-action="italic">
+              <em>I</em>
+            </button>
+
+            <button type="button" class="tool-button" data-action="underline">
+              <span class="underline">U</span>
+            </button>
+
+            <button type="button" class="tool-button" data-action="heading">
+              #
+            </button>
+
+            <button type="button" class="tool-button" data-action="bullet">
+              •
+            </button>
+
+            <button type="button" class="tool-button" data-action="numbered">
+              1.
+            </button>
+
+            <button type="button" class="tool-button" data-action="inline-code">
+              &lt;/&gt;
+            </button>
+
+            <button type="button" class="tool-button" data-action="code-block">
+              ```
+            </button>
+
+            <button type="button" class="tool-button" data-action="link">
+              🔗
+            </button>
+
+            <label class="tool-button color-tool">
+              <input id="colorInput" type="color" value="#2563eb" />
+              🎨
+            </label>
+          </div>
+
+          <div class="editor-grid">
+            <section class="panel-column">
+              <div class="panel-header">
+                <h2>ویرایشگر</h2>
+                <span id="saveStatus" class="status-pill">ذخیره شد</span>
+              </div>
+
+              <textarea
+                id="noteContentInput"
+                class="note-textarea"
+                placeholder="متن یا مارک‌داون را اینجا بنویسید"
+              ></textarea>
+            </section>
+
+            <section class="panel-column">
+              <div class="panel-header">
+                <h2>پیش‌نمایش</h2>
+                <span class="status-pill subtle">زنده</span>
+              </div>
+
+              <article id="previewPanel" class="preview-panel"></article>
+            </section>
+          </div>
+        </section>
+
+        <section class="empty-state hidden" id="emptyState">
+          <div>
+            <p class="eyebrow">Ready</p>
+            <h2>یک یادداشت را انتخاب کنید</h2>
+            <p>
+              از نوار کناری یک یادداشت را باز کنید یا با دکمه «یادداشت جدید» کار را شروع کنید.
+            </p>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Load app logic. -->
+    <script src="src/js/core.js"></script>
+    <script src="src/js/app.js"></script>
+  </body>
+</html>
