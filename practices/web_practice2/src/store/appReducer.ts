@@ -47,6 +47,7 @@ export type AppAction =
       type: 'REMOVE_REQUEST_FROM_COLLECTION';
       payload: { collectionId: string; savedRequestId: string; updatedAt: string };
     }
+  | { type: 'IMPORT_COLLECTIONS'; payload: { collections: Collection[] } }
   | { type: 'LOAD_SAVED_REQUEST'; payload: { request: RequestConfig } }
   | { type: 'SET_THEME'; payload: { theme: ThemeMode } };
 
@@ -147,7 +148,6 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           ...tab.request,
           ...action.payload.changes
         },
-        // Clear validation errors when the user edits the request.
         error: tab.error?.type === 'validation' ? null : tab.error
       }));
     }
@@ -302,6 +302,13 @@ export function appReducer(state: AppState, action: AppAction): AppState {
               }
             : collection
         )
+      };
+    }
+
+    case 'IMPORT_COLLECTIONS': {
+      return {
+        ...state,
+        collections: [...action.payload.collections, ...state.collections]
       };
     }
 

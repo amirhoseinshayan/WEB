@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent
+} from 'react';
 import type {
   Collection,
   HistoryItem,
@@ -6,6 +12,13 @@ import type {
   SavedRequest
 } from '../../types/apiClient';
 import { useAppState } from '../../store/AppContext';
+import {
+  createCollectionsExportPayload,
+  downloadJsonFile,
+  getAllCollectionsExportFileName,
+  getCollectionExportFileName,
+  parseCollectionsJson
+} from '../../utils/collections';
 import { createId } from '../../utils/id';
 
 function formatDate(value: string): string {
@@ -84,6 +97,7 @@ function HistoryStatus({ item }: { item: HistoryItem }) {
 
 export function Sidebar() {
   const { state, dispatch } = useAppState();
+  const importInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(
     null
   );
@@ -204,6 +218,61 @@ export function Sidebar() {
     });
   }
 
+  function handleExportAllCollections() {
+    if (state.collections.length === 0) {
+      return;
+    }
+
+    downloadJsonFile(
+      getAllCollectionsExportFileName(),
+      createCollectionsExportPayload(state.collections)
+    );
+  }
+
+  function handleExportCollection(collection: Collection) {
+    downloadJsonFile(
+      getCollectionExportFileName(collection),
+      createCollectionsExportPayload([collection])
+    );
+  }
+
+  async function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const result = parseCollectionsJson(text);
+
+      if (result.error) {
+        window.alert(result.error);
+        return;
+      }
+
+      dispatch({
+        type: 'IMPORT_COLLECTIONS',
+        payload: {
+          collections: result.collections
+        }
+      });
+
+      setSelectedCollectionId(result.collections[0]?.id ?? null);
+
+      window.alert(
+        `Imported ${result.collections.length} collection${
+          result.collections.length === 1 ? '' : 's'
+        }.`
+      );
+    } catch {
+      window.alert('Could not read this file. Please try another JSON file.');
+    } finally {
+      event.target.value = '';
+    }
+  }
+
   return (
     <aside className="sidebar">
       <section className="sidebar-card">
@@ -221,19 +290,34 @@ export function Sidebar() {
             New Collection
           </button>
 
-          <button type="button" disabled>
+          <button
+            type="button"
+            onClick={() => importInputRef.current?.click()}
+          >
             Import JSON
           </button>
 
-          <button type="button" disabled>
-            Export JSON
+          <button
+            type="button"
+            disabled={state.collections.length === 0}
+            onClick={handleExportAllCollections}
+          >
+            Export All
           </button>
+
+          <input
+            ref={importInputRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden-file-input"
+            onChange={handleImportFile}
+          />
         </div>
 
         {state.collections.length === 0 ? (
           <div className="empty-state compact">
             <strong>No collections yet</strong>
-            <span>Create a collection and save requests into it.</span>
+            <span>Create or import a collection to get started.</span>
           </div>
         ) : (
           <div className="collections-area">
@@ -271,6 +355,13 @@ export function Sidebar() {
                       onClick={() => handleSaveActiveRequest(selectedCollection)}
                     >
                       Save Current
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleExportCollection(selectedCollection)}
+                    >
+                      Export
                     </button>
 
                     <button

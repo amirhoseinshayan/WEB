@@ -1167,3 +1167,10 @@ html[data-theme="dark"] .topbar {
   transform: none;
   background: var(--danger-soft);
 }
+/* =========================
+   Phase 10 - Collections import/export
+   ========================= */
+
+.hidden-file-input {
+  display: none;
+}
