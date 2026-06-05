@@ -1204,3 +1204,15 @@ html[data-theme="dark"] .topbar {
     width: auto;
   }
 }
+/* =========================
+   Phase 12 - Clear all request fields
+   ========================= */
+
+.clear-all-button {
+  color: var(--danger);
+}
+
+.clear-all-button:hover:not(:disabled) {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}

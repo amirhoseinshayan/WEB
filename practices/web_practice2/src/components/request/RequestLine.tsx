@@ -10,6 +10,7 @@ import type {
 import { normalizeFetchError, sendHttpRequest } from '../../utils/httpClient';
 import { createId } from '../../utils/id';
 import { validateRequestBody } from '../../utils/requestBody';
+import { shouldConfirmClearRequest } from '../../utils/requestState';
 import { validateRequestUrl } from '../../utils/url';
 
 interface RequestLineProps {
@@ -170,7 +171,17 @@ export function RequestLine({ activeTab }: RequestLineProps) {
     }
   }
 
-  function handleClearRequest() {
+  function handleClearAllFields() {
+    if (shouldConfirmClearRequest(activeTab)) {
+      const confirmed = window.confirm(
+        'Clear all fields in this tab? This will reset URL, params, headers, body, response, and errors.'
+      );
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
     setValidationMessage(null);
     dispatch({ type: 'RESET_ACTIVE_REQUEST' });
   }
@@ -229,10 +240,12 @@ export function RequestLine({ activeTab }: RequestLineProps) {
 
       <button
         type="button"
+        className="clear-all-button"
         disabled={activeTab.isLoading}
-        onClick={handleClearRequest}
+        title="Clear URL, params, headers, body, response, and errors for this tab."
+        onClick={handleClearAllFields}
       >
-        Clear
+        Clear All
       </button>
     </section>
   );
