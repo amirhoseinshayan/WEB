@@ -17,6 +17,8 @@ import { MAX_HISTORY_ITEMS } from '../constants/storage';
 
 export type AppAction =
   | { type: 'CREATE_TAB' }
+  | { type: 'DUPLICATE_TAB'; payload: { sourceTabId: string } }
+  | { type: 'RENAME_TAB'; payload: { tabId: string; title: string } }
   | { type: 'CLOSE_TAB'; payload: { tabId: string } }
   | { type: 'SET_ACTIVE_TAB'; payload: { tabId: string } }
   | {
@@ -95,6 +97,59 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
+    case 'DUPLICATE_TAB': {
+      const sourceTab = state.tabs.find(
+        (tab) => tab.id === action.payload.sourceTabId
+      );
+
+      if (!sourceTab) {
+        return state;
+      }
+
+      const sourceTabIndex = state.tabs.findIndex(
+        (tab) => tab.id === sourceTab.id
+      );
+
+      const duplicatedTab = createDefaultTab(`${sourceTab.title} Copy`);
+
+      const newTab: ApiTab = {
+        ...duplicatedTab,
+        request: cloneRequestConfig(sourceTab.request),
+        response: null,
+        error: null,
+        isLoading: false
+      };
+
+      const nextTabs = [...state.tabs];
+      nextTabs.splice(sourceTabIndex + 1, 0, newTab);
+
+      return {
+        ...state,
+        tabs: nextTabs,
+        activeTabId: newTab.id
+      };
+    }
+
+    case 'RENAME_TAB': {
+      const trimmedTitle = action.payload.title.trim();
+
+      if (!trimmedTitle) {
+        return state;
+      }
+
+      return {
+        ...state,
+        tabs: state.tabs.map((tab) =>
+          tab.id === action.payload.tabId
+            ? {
+                ...tab,
+                title: trimmedTitle
+              }
+            : tab
+        )
+      };
+    }
+
     case 'CLOSE_TAB': {
       if (state.tabs.length === 1) {
         return state;
@@ -148,6 +203,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           ...tab.request,
           ...action.payload.changes
         },
+        // Clear validation errors when the user edits the request.
         error: tab.error?.type === 'validation' ? null : tab.error
       }));
     }
