@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import type { ApiTab } from '../../types/apiClient';
+import { useAppState } from '../../store/AppContext';
 import { copyTextToClipboard } from '../../utils/clipboard';
 import { generateCurlCommand } from '../../utils/curl';
+import { createId } from '../../utils/id';
 import { getEnabledQueryParams } from '../../utils/queryParams';
 import { getEnabledHeaders } from '../../utils/requestHeaders';
 import { methodSupportsRequestBody } from '../../utils/requestBody';
@@ -27,6 +29,7 @@ function getBodyLabel(activeTab: ApiTab): string {
 }
 
 export function RequestSummary({ activeTab }: RequestSummaryProps) {
+  const { dispatch } = useAppState();
   const [copyTarget, setCopyTarget] = useState<CopyTarget>(null);
 
   const enabledParams = getEnabledQueryParams(activeTab.request.params);
@@ -44,11 +47,38 @@ export function RequestSummary({ activeTab }: RequestSummaryProps) {
 
     if (!copied) {
       setCopyTarget(null);
-      window.alert('Copy failed. Please copy the text manually.');
+
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          notification: {
+            id: createId('notification'),
+            type: 'error',
+            title: 'Copy failed',
+            message: 'Please copy the text manually.'
+          }
+        }
+      });
+
       return;
     }
 
     setCopyTarget(target);
+
+    dispatch({
+      type: 'ADD_NOTIFICATION',
+      payload: {
+        notification: {
+          id: createId('notification'),
+          type: 'success',
+          title: target === 'url' ? 'URL copied' : 'cURL copied',
+          message:
+            target === 'url'
+              ? 'The request URL was copied to your clipboard.'
+              : 'The generated cURL command was copied to your clipboard.'
+        }
+      }
+    });
 
     window.setTimeout(() => {
       setCopyTarget(null);

@@ -1,5 +1,6 @@
 import type {
   ApiTab,
+  AppNotification,
   AppState,
   Collection,
   HistoryItem,
@@ -14,6 +15,8 @@ import {
   createDefaultTab
 } from '../constants/defaults';
 import { MAX_HISTORY_ITEMS } from '../constants/storage';
+
+const MAX_NOTIFICATIONS = 5;
 
 export type AppAction =
   | { type: 'CREATE_TAB' }
@@ -51,6 +54,9 @@ export type AppAction =
     }
   | { type: 'IMPORT_COLLECTIONS'; payload: { collections: Collection[] } }
   | { type: 'LOAD_SAVED_REQUEST'; payload: { request: RequestConfig } }
+  | { type: 'ADD_NOTIFICATION'; payload: { notification: AppNotification } }
+  | { type: 'REMOVE_NOTIFICATION'; payload: { notificationId: string } }
+  | { type: 'CLEAR_NOTIFICATIONS' }
   | { type: 'SET_THEME'; payload: { theme: ThemeMode } };
 
 function cloneRequestConfig(request: RequestConfig): RequestConfig {
@@ -203,7 +209,6 @@ export function appReducer(state: AppState, action: AppAction): AppState {
           ...tab.request,
           ...action.payload.changes
         },
-        // Clear validation errors when the user edits the request.
         error: tab.error?.type === 'validation' ? null : tab.error
       }));
     }
@@ -376,6 +381,32 @@ export function appReducer(state: AppState, action: AppAction): AppState {
         error: null,
         isLoading: false
       }));
+    }
+
+    case 'ADD_NOTIFICATION': {
+      return {
+        ...state,
+        notifications: [
+          action.payload.notification,
+          ...state.notifications
+        ].slice(0, MAX_NOTIFICATIONS)
+      };
+    }
+
+    case 'REMOVE_NOTIFICATION': {
+      return {
+        ...state,
+        notifications: state.notifications.filter(
+          (notification) => notification.id !== action.payload.notificationId
+        )
+      };
+    }
+
+    case 'CLEAR_NOTIFICATIONS': {
+      return {
+        ...state,
+        notifications: []
+      };
     }
 
     case 'SET_THEME': {

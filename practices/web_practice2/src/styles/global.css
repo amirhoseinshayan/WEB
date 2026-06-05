@@ -1398,3 +1398,84 @@ html[data-theme="dark"] .topbar {
     grid-template-columns: 1fr;
   }
 }
+/* =========================
+   Phase 15 - Toast notifications
+   ========================= */
+
+.notification-center {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  display: grid;
+  width: min(380px, calc(100vw - 2rem));
+  gap: 0.75rem;
+  pointer-events: none;
+}
+
+.notification-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2rem;
+  gap: 0.75rem;
+  align-items: start;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 0.9rem;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  pointer-events: auto;
+}
+
+.notification-card strong {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.notification-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.notification-card button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.2rem;
+  color: var(--muted);
+  background: transparent;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.notification-card.success {
+  border-color: rgba(22, 163, 74, 0.45);
+}
+
+.notification-card.success strong {
+  color: var(--success);
+}
+
+.notification-card.error {
+  border-color: rgba(220, 38, 38, 0.45);
+}
+
+.notification-card.error strong {
+  color: var(--danger);
+}
+
+.notification-card.warning {
+  border-color: rgba(245, 158, 11, 0.55);
+}
+
+.notification-card.info strong {
+  color: var(--primary);
+}
+
+@media (max-width: 560px) {
+  .notification-center {
+    top: 0.75rem;
+    right: 0.75rem;
+    width: calc(100vw - 1.5rem);
+  }
+}

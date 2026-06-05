@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { TopBar } from './components/layout/TopBar';
 import { Sidebar } from './components/layout/Sidebar';
+import { NotificationCenter } from './components/layout/NotificationCenter';
 import { RequestLine } from './components/request/RequestLine';
 import { RequestPanel } from './components/request/RequestPanel';
 import { RequestSummary } from './components/request/RequestSummary';
@@ -23,6 +24,8 @@ function AppContent() {
   if (!activeTab) {
     return (
       <main className="app-shell">
+        <NotificationCenter />
+
         <div className="empty-state">
           <strong>No active tab found</strong>
           <span>Please create a new request tab.</span>
@@ -33,6 +36,7 @@ function AppContent() {
 
   return (
     <main className="app-shell">
+      <NotificationCenter />
       <TopBar />
 
       <div className="workspace-layout">

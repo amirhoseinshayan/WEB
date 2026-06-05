@@ -18,6 +18,15 @@ export type RequestErrorField =
   | 'body'
   | 'request';
 
+export type NotificationType = 'success' | 'error' | 'info' | 'warning';
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message?: string;
+}
+
 export interface KeyValuePair {
   id: string;
   key: string;
@@ -94,4 +103,5 @@ export interface AppState {
   history: HistoryItem[];
   collections: Collection[];
   theme: ThemeMode;
+  notifications: AppNotification[];
 }

@@ -51,14 +51,14 @@ function sanitizeLoadedState(loadedState: AppState, fallback: AppState): AppStat
       : loadedState.tabs[0].id,
     tabs: loadedState.tabs.map((tab) => ({
       ...tab,
-      // Do not keep a tab stuck in loading state after refresh.
       isLoading: false
     })),
     history: Array.isArray(loadedState.history) ? loadedState.history : [],
     collections: Array.isArray(loadedState.collections)
       ? loadedState.collections
       : [],
-    theme: isValidTheme(loadedState.theme) ? loadedState.theme : fallback.theme
+    theme: isValidTheme(loadedState.theme) ? loadedState.theme : fallback.theme,
+    notifications: []
   };
 }
 
@@ -67,9 +67,9 @@ function sanitizeStateForStorage(state: AppState): AppState {
     ...state,
     tabs: state.tabs.map((tab) => ({
       ...tab,
-      // Loading is a temporary runtime state.
       isLoading: false
-    }))
+    })),
+    notifications: []
   };
 }
 

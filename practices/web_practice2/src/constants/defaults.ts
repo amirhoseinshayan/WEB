@@ -47,6 +47,7 @@ export function createInitialAppState(): AppState {
     activeTabId: firstTab.id,
     history: [],
     collections: [],
-    theme: 'light'
+    theme: 'light',
+    notifications: []
   };
 }

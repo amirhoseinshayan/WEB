@@ -248,7 +248,18 @@ export function Sidebar() {
       const result = parseCollectionsJson(text);
 
       if (result.error) {
-        window.alert(result.error);
+        dispatch({
+          type: 'ADD_NOTIFICATION',
+          payload: {
+            notification: {
+              id: createId('notification'),
+              type: 'error',
+              title: 'Import failed',
+              message: result.error
+            }
+          }
+        });
+
         return;
       }
 
@@ -261,13 +272,31 @@ export function Sidebar() {
 
       setSelectedCollectionId(result.collections[0]?.id ?? null);
 
-      window.alert(
-        `Imported ${result.collections.length} collection${
-          result.collections.length === 1 ? '' : 's'
-        }.`
-      );
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          notification: {
+            id: createId('notification'),
+            type: 'success',
+            title: 'Collections imported',
+            message: `Imported ${result.collections.length} collection${
+              result.collections.length === 1 ? '' : 's'
+            }.`
+          }
+        }
+      });
     } catch {
-      window.alert('Could not read this file. Please try another JSON file.');
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          notification: {
+            id: createId('notification'),
+            type: 'error',
+            title: 'File read failed',
+            message: 'Could not read this file. Please try another JSON file.'
+          }
+        }
+      });
     } finally {
       event.target.value = '';
     }
