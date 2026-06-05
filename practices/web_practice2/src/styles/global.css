@@ -1216,3 +1216,58 @@ html[data-theme="dark"] .topbar {
   border-color: var(--danger);
   background: var(--danger-soft);
 }
+/* =========================
+   Phase 13 - Advanced error handling
+   ========================= */
+
+.detailed-error-state {
+  align-content: start;
+  justify-items: stretch;
+  text-align: left;
+}
+
+.error-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.error-type-badge,
+.error-field-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.error-type-badge {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.error-field-badge {
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.status-warning {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid var(--danger);
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.status-warning strong {
+  color: var(--danger);
+}
+
+.status-warning span {
+  line-height: 1.5;
+}

@@ -16,6 +16,30 @@ function getStatusClass(status: number): string {
   return 'neutral';
 }
 
+function getStatusDescription(status: number): string {
+  if (status >= 100 && status < 200) {
+    return 'Informational response';
+  }
+
+  if (status >= 200 && status < 300) {
+    return 'Successful response';
+  }
+
+  if (status >= 300 && status < 400) {
+    return 'Redirection response';
+  }
+
+  if (status >= 400 && status < 500) {
+    return 'Client-side error response';
+  }
+
+  if (status >= 500) {
+    return 'Server-side error response';
+  }
+
+  return 'Unknown response status';
+}
+
 function formatReceivedAt(value: string): string {
   try {
     return new Date(value).toLocaleString();
@@ -24,9 +48,19 @@ function formatReceivedAt(value: string): string {
   }
 }
 
+function formatErrorType(value: string): string {
+  return value
+    .split('-')
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(' ');
+}
+
 export function ResponsePanel({ activeTab }: ResponsePanelProps) {
   const response = activeTab.response;
   const statusClass = response ? getStatusClass(response.status) : '';
+  const statusDescription = response
+    ? getStatusDescription(response.status)
+    : null;
 
   return (
     <section className="panel-card response-panel">
@@ -52,8 +86,21 @@ export function ResponsePanel({ activeTab }: ResponsePanelProps) {
       )}
 
       {!activeTab.isLoading && activeTab.error && (
-        <div className="error-state">
+        <div className="error-state detailed-error-state">
+          <div className="error-meta-row">
+            <span className="error-type-badge">
+              {formatErrorType(activeTab.error.type)}
+            </span>
+
+            {activeTab.error.field && (
+              <span className="error-field-badge">
+                Field: {activeTab.error.field}
+              </span>
+            )}
+          </div>
+
           <strong>{activeTab.error.message}</strong>
+
           {activeTab.error.details && <span>{activeTab.error.details}</span>}
         </div>
       )}
@@ -66,6 +113,11 @@ export function ResponsePanel({ activeTab }: ResponsePanelProps) {
               <dd>
                 {response.status} {response.statusText}
               </dd>
+            </div>
+
+            <div>
+              <dt>Status Type</dt>
+              <dd>{statusDescription}</dd>
             </div>
 
             <div>
@@ -83,6 +135,16 @@ export function ResponsePanel({ activeTab }: ResponsePanelProps) {
               <dd>{response.headers.length}</dd>
             </div>
           </dl>
+
+          {response.status >= 400 && (
+            <div className="status-warning">
+              <strong>Request completed with an error status.</strong>
+              <span>
+                The server returned a response, but the status code indicates a
+                client or server error.
+              </span>
+            </div>
+          )}
 
           {response.headers.length > 0 && (
             <details className="response-headers">

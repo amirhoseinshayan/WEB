@@ -1,3 +1,4 @@
+import { HTTP_REQUEST_TIMEOUT_MS } from '../constants/http';
 import type {
   RequestConfig,
   RequestError,
@@ -40,7 +41,10 @@ async function readResponseBody(response: Response): Promise<string> {
   return rawText;
 }
 
-function createRequestInit(request: RequestConfig): RequestInit {
+function createRequestInit(
+  request: RequestConfig,
+  signal: AbortSignal
+): RequestInit {
   const headers = buildHeadersObject(request.headers);
   const shouldSendBody =
     methodSupportsRequestBody(request.method) && request.body.trim() !== '';
@@ -56,29 +60,56 @@ function createRequestInit(request: RequestConfig): RequestInit {
   return {
     method: request.method,
     headers,
-    body: shouldSendBody ? request.body : undefined
+    body: shouldSendBody ? request.body : undefined,
+    signal
   };
 }
 
 export async function sendHttpRequest(
   request: RequestConfig
 ): Promise<ResponseData> {
+  const controller = new AbortController();
   const startedAt = performance.now();
-  const response = await fetch(request.url.trim(), createRequestInit(request));
-  const body = await readResponseBody(response);
-  const finishedAt = performance.now();
 
-  return {
-    status: response.status,
-    statusText: response.statusText,
-    body,
-    headers: extractResponseHeaders(response.headers),
-    durationMs: Math.round(finishedAt - startedAt),
-    receivedAt: new Date().toISOString()
-  };
+  // Abort long-running requests to avoid infinite loading.
+  const timeoutId = window.setTimeout(() => {
+    controller.abort();
+  }, HTTP_REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(
+      request.url.trim(),
+      createRequestInit(request, controller.signal)
+    );
+
+    const body = await readResponseBody(response);
+    const finishedAt = performance.now();
+
+    return {
+      status: response.status,
+      statusText: response.statusText,
+      body,
+      headers: extractResponseHeaders(response.headers),
+      durationMs: Math.round(finishedAt - startedAt),
+      receivedAt: new Date().toISOString()
+    };
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 }
 
 export function normalizeFetchError(error: unknown): RequestError {
+  if (error instanceof Error && error.name === 'AbortError') {
+    return {
+      type: 'timeout',
+      field: 'request',
+      message: 'Request timed out.',
+      details: `The server did not respond within ${Math.round(
+        HTTP_REQUEST_TIMEOUT_MS / 1000
+      )} seconds. Please try again or check the server.`
+    };
+  }
+
   if (error instanceof TypeError) {
     return {
       type: 'network',

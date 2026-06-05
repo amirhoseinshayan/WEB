@@ -7,6 +7,7 @@ export type ThemeMode = 'light' | 'dark';
 export type RequestErrorType =
   | 'validation'
   | 'network'
+  | 'timeout'
   | 'server'
   | 'unknown';
 
