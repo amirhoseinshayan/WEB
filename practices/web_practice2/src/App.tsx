@@ -3,6 +3,7 @@ import { TopBar } from './components/layout/TopBar';
 import { Sidebar } from './components/layout/Sidebar';
 import { RequestLine } from './components/request/RequestLine';
 import { RequestPanel } from './components/request/RequestPanel';
+import { RequestSummary } from './components/request/RequestSummary';
 import { RequestTabs } from './components/request/RequestTabs';
 import { ResponsePanel } from './components/response/ResponsePanel';
 import { AppProvider, useAppState } from './store/AppContext';
@@ -40,6 +41,7 @@ function AppContent() {
         <section className="workspace-main">
           <RequestTabs />
           <RequestLine activeTab={activeTab} />
+          <RequestSummary activeTab={activeTab} />
 
           <div className="request-response-grid">
             <RequestPanel activeTab={activeTab} />
