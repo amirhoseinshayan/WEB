@@ -15,15 +15,18 @@ export function TopBar() {
   return (
     <header className="topbar">
       <div className="topbar-title">
-        <p className="eyebrow">Web Programming HW2</p>
         <h1>API Client</h1>
+
         <p className="topbar-description">
           Build, organize, and inspect HTTP requests.
         </p>
       </div>
 
       <div className="topbar-actions">
-        <button type="button" onClick={() => dispatch({ type: 'CREATE_TAB' })}>
+        <button
+          type="button"
+          onClick={() => dispatch({ type: 'CREATE_TAB' })}
+        >
           New Tab
         </button>
 

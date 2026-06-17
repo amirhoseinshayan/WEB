@@ -40,12 +40,27 @@ function getStatusDescription(status: number): string {
   return 'Unknown response status';
 }
 
+function padDatePart(value: number): string {
+  return String(value).padStart(2, '0');
+}
+
 function formatReceivedAt(value: string): string {
-  try {
-    return new Date(value).toLocaleString();
-  } catch {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
     return value;
   }
+
+  const day = padDatePart(date.getDate());
+  const month = padDatePart(date.getMonth() + 1);
+  const year = date.getFullYear();
+
+  const hours = padDatePart(date.getHours());
+  const minutes = padDatePart(date.getMinutes());
+  const seconds = padDatePart(date.getSeconds());
+
+  // Display the date as day/month/year instead of month/day/year.
+  return `${day}/${month}/${year} - ${hours}:${minutes}:${seconds}`;
 }
 
 function formatErrorType(value: string): string {
@@ -57,7 +72,9 @@ function formatErrorType(value: string): string {
 
 export function ResponsePanel({ activeTab }: ResponsePanelProps) {
   const response = activeTab.response;
+
   const statusClass = response ? getStatusClass(response.status) : '';
+
   const statusDescription = response
     ? getStatusDescription(response.status)
     : null;
@@ -80,7 +97,9 @@ export function ResponsePanel({ activeTab }: ResponsePanelProps) {
       {activeTab.isLoading && (
         <div className="loading-state">
           <span className="loader" />
+
           <strong>Sending request...</strong>
+
           <span>Please wait while the server responds.</span>
         </div>
       )}
@@ -101,7 +120,9 @@ export function ResponsePanel({ activeTab }: ResponsePanelProps) {
 
           <strong>{activeTab.error.message}</strong>
 
-          {activeTab.error.details && <span>{activeTab.error.details}</span>}
+          {activeTab.error.details && (
+            <span>{activeTab.error.details}</span>
+          )}
         </div>
       )}
 
@@ -110,6 +131,7 @@ export function ResponsePanel({ activeTab }: ResponsePanelProps) {
           <dl className="response-meta">
             <div>
               <dt>Status</dt>
+
               <dd>
                 {response.status} {response.statusText}
               </dd>
@@ -139,6 +161,7 @@ export function ResponsePanel({ activeTab }: ResponsePanelProps) {
           {response.status >= 400 && (
             <div className="status-warning">
               <strong>Request completed with an error status.</strong>
+
               <span>
                 The server returned a response, but the status code indicates a
                 client or server error.
@@ -151,8 +174,8 @@ export function ResponsePanel({ activeTab }: ResponsePanelProps) {
               <summary>Response Headers</summary>
 
               <div className="response-headers-list">
-                {response.headers.map((header) => (
-                  <div key={`${header.key}-${header.value}`}>
+                {response.headers.map((header, index) => (
+                  <div key={`${header.key}-${header.value}-${index}`}>
                     <span>{header.key}</span>
                     <strong>{header.value}</strong>
                   </div>
@@ -171,6 +194,7 @@ export function ResponsePanel({ activeTab }: ResponsePanelProps) {
             ) : (
               <div className="empty-state compact">
                 <strong>Empty response body</strong>
+
                 <span>The server returned no body content.</span>
               </div>
             )}
@@ -181,6 +205,7 @@ export function ResponsePanel({ activeTab }: ResponsePanelProps) {
       {!activeTab.isLoading && !activeTab.error && !response && (
         <div className="empty-state response-empty">
           <strong>No response yet</strong>
+
           <span>
             Send a request to see the status code, response body, and response
             headers here.

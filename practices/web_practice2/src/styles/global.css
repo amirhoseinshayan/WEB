@@ -325,73 +325,6 @@ html[data-theme="dark"] .topbar {
   font-weight: 700;
 }
 
-.tabs-bar {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 0.7rem;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-
-.tabs-scroll {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  gap: 0.5rem;
-  overflow-x: auto;
-  padding-bottom: 0.1rem;
-}
-
-.tab-item {
-  display: inline-flex;
-  align-items: center;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface-muted);
-  white-space: nowrap;
-}
-
-.tab-item.active {
-  border-color: var(--primary);
-  background: var(--primary);
-}
-
-.tab-button,
-.tab-close,
-.add-tab-button {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.tab-button {
-  padding: 0.65rem 0.85rem;
-}
-
-.tab-close {
-  padding: 0.65rem 0.75rem;
-}
-
-.tab-item.active .tab-button,
-.tab-item.active .tab-close {
-  color: #ffffff;
-}
-
-.add-tab-button {
-  width: 2.7rem;
-  height: 2.7rem;
-  flex: 0 0 2.7rem;
-  border: 1px dashed var(--border);
-  border-radius: 14px;
-  background: var(--surface-muted);
-  font-weight: 800;
-}
 
 .request-line {
   display: grid;
@@ -584,16 +517,6 @@ html[data-theme="dark"] .topbar {
   font-weight: 800;
 }
 
-.response-content pre {
-  max-height: 420px;
-  overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 1rem;
-  background: var(--surface-muted);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
 
 @keyframes spin {
   to {
@@ -671,16 +594,6 @@ html[data-theme="dark"] .topbar {
     width: 100%;
   }
 
-  .tabs-bar {
-    width: 100%;
-    align-items: center;
-    flex-direction: row;
-  }
-
-  .add-tab-button {
-    width: 2.7rem;
-    flex: 0 0 2.7rem;
-  }
 }
 /* =========================
    Phase 3 - URL validation
@@ -1175,36 +1088,6 @@ html[data-theme="dark"] .topbar {
   display: none;
 }
 /* =========================
-   Phase 11 - Advanced tabs
-   ========================= */
-
-.tab-rename {
-  padding: 0.65rem 0.55rem;
-  color: var(--muted);
-}
-
-.tab-item.active .tab-rename {
-  color: #ffffff;
-}
-
-.duplicate-tab-button {
-  flex: 0 0 auto;
-  white-space: nowrap;
-  font-weight: 800;
-}
-
-@media (max-width: 820px) {
-  .duplicate-tab-button {
-    padding-inline: 0.75rem;
-  }
-}
-
-@media (max-width: 560px) {
-  .duplicate-tab-button {
-    width: auto;
-  }
-}
-/* =========================
    Phase 12 - Clear all request fields
    ========================= */
 
@@ -1477,5 +1360,242 @@ html[data-theme="dark"] .topbar {
     top: 0.75rem;
     right: 0.75rem;
     width: calc(100vw - 1.5rem);
+  }
+}
+/* =========================
+   Request tabs
+   ========================= */
+
+.tabs-bar {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 72px;
+  align-items: center;
+  gap: 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 0.65rem 0.75rem;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+/* Only the request tabs scroll horizontally. */
+.tabs-scroll {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 50px;
+  align-items: center;
+  gap: 0.65rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.15rem 0 0.5rem;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.tabs-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.tabs-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabs-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.tabs-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Every request tab keeps enough width for its title and icons. */
+.tab-item {
+  display: inline-flex;
+  flex: 0 0 240px;
+  width: 240px;
+  min-width: 240px;
+  max-width: 240px;
+  height: 46px;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-muted);
+  white-space: nowrap;
+}
+
+.tab-item.active {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+/* Request title uses all available space inside the tab. */
+.tab-button {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+  height: 44px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  padding: 0 0.9rem;
+  color: var(--text);
+  background: transparent;
+  box-shadow: none;
+  line-height: 44px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Edit and close icons always have their own fixed space. */
+.tab-rename,
+.tab-close {
+  display: inline-flex;
+  flex: 0 0 42px;
+  width: 42px;
+  min-width: 42px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  box-shadow: none;
+}
+
+.tab-rename svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+  pointer-events: none;
+}
+
+.tab-close {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.tab-item.active .tab-button,
+.tab-item.active .tab-rename,
+.tab-item.active .tab-close {
+  color: #ffffff;
+}
+
+.tab-button:hover:not(:disabled),
+.tab-rename:hover:not(:disabled),
+.tab-close:hover:not(:disabled) {
+  transform: none;
+  background: var(--surface-soft);
+}
+
+.tab-item.active .tab-button:hover:not(:disabled),
+.tab-item.active .tab-rename:hover:not(:disabled),
+.tab-item.active .tab-close:hover:not(:disabled) {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* Keep Duplicate and New Tab outside the scrollable area. */
+.duplicate-tab-button,
+.add-tab-button {
+  flex: 0 0 auto;
+  height: 46px;
+  min-height: 46px;
+}
+
+.duplicate-tab-button {
+  width: 132px;
+  min-width: 132px;
+  padding: 0 1rem;
+  white-space: nowrap;
+  font-weight: 800;
+}
+
+.add-tab-button {
+  width: 52px;
+  min-width: 52px;
+  padding: 0;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  background: var(--surface-muted);
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+/* Medium screens */
+@media (max-width: 1100px) {
+  .tab-item {
+    flex-basis: 220px;
+    width: 220px;
+    min-width: 220px;
+    max-width: 220px;
+  }
+
+  .duplicate-tab-button {
+    width: 118px;
+    min-width: 118px;
+  }
+}
+
+/* Small screens */
+@media (max-width: 820px) {
+  .tabs-bar {
+    min-height: 68px;
+    gap: 0.5rem;
+    padding: 0.55rem;
+  }
+
+  .tab-item {
+    flex-basis: 210px;
+    width: 210px;
+    min-width: 210px;
+    max-width: 210px;
+  }
+
+  .duplicate-tab-button {
+    width: 110px;
+    min-width: 110px;
+    padding: 0 0.7rem;
+  }
+
+  .add-tab-button {
+    width: 48px;
+    min-width: 48px;
+  }
+}
+
+@media (max-width: 560px) {
+  .tabs-bar {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .tab-item {
+    flex-basis: 200px;
+    width: 200px;
+    min-width: 200px;
+    max-width: 200px;
+  }
+
+  .duplicate-tab-button {
+    width: 102px;
+    min-width: 102px;
+    font-size: 0.86rem;
+  }
+
+  .add-tab-button {
+    width: 46px;
+    min-width: 46px;
   }
 }
