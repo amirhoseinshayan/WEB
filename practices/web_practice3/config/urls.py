@@ -16,6 +16,7 @@ urlpatterns = [
 
     # App API routes
     path('api/', include('accounts.urls')),
+    path('api/', include('chats.urls')),
 
     # API documentation
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

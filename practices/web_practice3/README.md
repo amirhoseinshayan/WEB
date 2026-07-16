@@ -32,30 +32,6 @@ The goal of this project is to implement the backend of a simplified ChatGPT-sty
 
 ---
 
-## Main Features Planned
-
-This project will include the following main features:
-
-- User registration and login
-- JWT-based authentication
-- User profile management
-- User subscription management
-- Free and Premium user plans
-- AI model selection
-- Custom assistants with system prompts
-- Conversation management
-- Message management
-- Mock AI responses
-- File upload with chat messages
-- Project/workspace management
-- Linked accounts and account switching
-- RESTful API permissions
-- API pagination
-- Swagger API documentation
-- Backend tests
-
----
-
 ## Implemented Phases
 
 ### Phase 0 - Initial Project Setup
@@ -112,6 +88,18 @@ Implemented:
 - Ownership helper methods on models
 - Data isolation tests
 
+### Phase 4 - CRUD APIs for Main Resources
+
+Implemented:
+
+- Project CRUD API
+- AI Model CRUD API with admin-only write access
+- Assistant CRUD API with public/private access rules
+- Conversation CRUD API with soft delete
+- Project conversations endpoint
+- Swagger documentation for main resources
+- API tests for CRUD and data isolation
+
 ---
 
 ## Project Structure
@@ -133,7 +121,9 @@ web_practice3/
 │   ├── admin.py
 │   ├── apps.py
 │   ├── models.py
+│   ├── serializers.py
 │   ├── tests.py
+│   ├── urls.py
 │   └── views.py
 │
 ├── config/
@@ -199,12 +189,6 @@ If you are using CMD:
 .\.venv\Scripts\activate.bat
 ```
 
-After activation, you should see something like this at the beginning of your terminal line:
-
-```text
-(.venv)
-```
-
 ### 4. Install dependencies
 
 ```powershell
@@ -215,25 +199,13 @@ pip install -r requirements.txt
 
 ## Run Project
 
-Before running the server, make sure the virtual environment is activated.
-
 ```powershell
 python manage.py check
-```
-
-Apply migrations:
-
-```powershell
 python manage.py migrate
-```
-
-Run the development server:
-
-```powershell
 python manage.py runserver
 ```
 
-The project will be available at:
+Project URL:
 
 ```text
 http://127.0.0.1:8000/
@@ -241,16 +213,32 @@ http://127.0.0.1:8000/
 
 ---
 
-## API Health Check
+## Swagger Documentation
+
+Swagger documentation:
+
+```text
+http://127.0.0.1:8000/api/docs/
+```
+
+OpenAPI schema:
+
+```text
+http://127.0.0.1:8000/api/schema/
+```
+
+ReDoc documentation:
+
+```text
+http://127.0.0.1:8000/api/redoc/
+```
+
+---
+
+## Health Check
 
 ```http
 GET /api/health/
-```
-
-Example URL:
-
-```text
-http://127.0.0.1:8000/api/health/
 ```
 
 Expected response:
@@ -274,56 +262,10 @@ Expected response:
 POST /api/auth/register/
 ```
 
-Example request:
-
-```json
-{
-  "username": "amir",
-  "email": "amir@example.com",
-  "first_name": "Amir",
-  "last_name": "Shayan",
-  "password": "StrongPass123!",
-  "password_confirm": "StrongPass123!"
-}
-```
-
 ### Login
 
 ```http
 POST /api/auth/login/
-```
-
-Login can be done with either username or email.
-
-Example request:
-
-```json
-{
-  "identifier": "amir",
-  "password": "StrongPass123!"
-}
-```
-
-Example response:
-
-```json
-{
-  "message": "Login successful.",
-  "access": "jwt-access-token",
-  "refresh": "jwt-refresh-token",
-  "user": {
-    "id": 1,
-    "username": "amir",
-    "email": "amir@example.com",
-    "first_name": "Amir",
-    "last_name": "Shayan",
-    "subscription_type": "free",
-    "premium_until": null,
-    "is_premium": false,
-    "created_at": "2026-01-01T10:00:00Z",
-    "updated_at": "2026-01-01T10:00:00Z"
-  }
-}
 ```
 
 ### Refresh Token
@@ -332,24 +274,10 @@ Example response:
 POST /api/auth/token/refresh/
 ```
 
-Example request:
-
-```json
-{
-  "refresh": "jwt-refresh-token"
-}
-```
-
 ### Get Profile
 
 ```http
 GET /api/auth/profile/
-```
-
-Required header:
-
-```text
-Authorization: Bearer <access_token>
 ```
 
 ### Update Profile
@@ -358,27 +286,65 @@ Authorization: Bearer <access_token>
 PATCH /api/auth/profile/
 ```
 
-Required header:
+Protected endpoints require this header:
 
 ```text
 Authorization: Bearer <access_token>
 ```
 
-Example request:
+---
 
-```json
-{
-  "first_name": "Amirhosein",
-  "last_name": "Shayan",
-  "email": "amirhosein@example.com"
-}
+## Main CRUD APIs
+
+### Projects
+
+```http
+GET     /api/projects/
+POST    /api/projects/
+GET     /api/projects/<id>/
+PATCH   /api/projects/<id>/
+DELETE  /api/projects/<id>/
+```
+
+### AI Models
+
+```http
+GET     /api/models/
+POST    /api/models/          admin only
+GET     /api/models/<id>/
+PATCH   /api/models/<id>/     admin only
+DELETE  /api/models/<id>/     admin only
+```
+
+### Assistants
+
+```http
+GET     /api/assistants/
+POST    /api/assistants/
+GET     /api/assistants/<id>/
+PATCH   /api/assistants/<id>/
+DELETE  /api/assistants/<id>/
+```
+
+### Conversations
+
+```http
+GET     /api/conversations/
+POST    /api/conversations/
+GET     /api/conversations/<id>/
+PATCH   /api/conversations/<id>/
+DELETE  /api/conversations/<id>/
+```
+
+### Project Conversations
+
+```http
+GET /api/projects/<project_id>/conversations/
 ```
 
 ---
 
 ## Permission and Data Isolation Design
-
-The project uses reusable permission classes and mixins to keep user data isolated.
 
 Main rules:
 
@@ -391,35 +357,13 @@ Main rules:
 - Public assistants can only be modified by admin users.
 - AI models are readable by authenticated users.
 - AI models can only be modified by admin users.
-- Conversations can be soft-deleted by changing their status to `deleted`.
+- Conversations are soft-deleted by changing their status to `deleted`.
 
 Main files:
 
 ```text
 core/permissions.py
 core/mixins.py
-```
-
----
-
-## Swagger Documentation
-
-Swagger documentation is available at:
-
-```text
-http://127.0.0.1:8000/api/docs/
-```
-
-OpenAPI schema is available at:
-
-```text
-http://127.0.0.1:8000/api/schema/
-```
-
-ReDoc documentation is available at:
-
-```text
-http://127.0.0.1:8000/api/redoc/
 ```
 
 ---
@@ -435,26 +379,6 @@ db.sqlite3
 ```
 
 This file is ignored by git and should not be pushed to the repository.
-
----
-
-## Environment Variables
-
-An example environment file is provided:
-
-```text
-.env.example
-```
-
-Example content:
-
-```env
-SECRET_KEY=change-this-secret-key
-DEBUG=True
-ALLOWED_HOSTS=127.0.0.1,localhost
-```
-
-The real `.env` file should not be committed to git.
 
 ---
 
@@ -487,18 +411,6 @@ However, the following files should be committed:
 ---
 
 ## Useful Commands
-
-### Activate virtual environment in PowerShell
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-### Activate virtual environment in CMD
-
-```cmd
-.\.venv\Scripts\activate.bat
-```
 
 ### Check Django project
 
@@ -542,36 +454,34 @@ python manage.py test
 python manage.py test core
 ```
 
-### Create requirements file
+### Run Phase 4 tests
 
 ```powershell
-pip freeze > requirements.txt
-```
-
-### Install requirements
-
-```powershell
-pip install -r requirements.txt
+python manage.py test chats
 ```
 
 ---
 
-## Phase 3 Checklist
+## Phase 4 Checklist
 
 Before moving to the next phase, the following items must be completed:
 
-- [ ] `core/permissions.py` is created
-- [ ] `core/mixins.py` is created
-- [ ] ownership helper methods are added to chat models
-- [ ] public/private assistant access logic is added
-- [ ] AI model availability logic is added
-- [ ] conversation soft delete helper is added
-- [ ] message soft delete helper is added
-- [ ] data isolation tests are added
+- [ ] `chats/serializers.py` is created
+- [ ] `chats/views.py` is updated
+- [ ] `chats/urls.py` is created
+- [ ] `config/urls.py` includes chat API routes
+- [ ] Project CRUD API works
+- [ ] AI Model read access works for authenticated users
+- [ ] AI Model write access is admin-only
+- [ ] Assistant CRUD API works
+- [ ] Normal users cannot create public assistants
+- [ ] Conversation CRUD API works
+- [ ] Conversation delete is soft delete
+- [ ] Project conversations endpoint works
+- [ ] Swagger shows CRUD endpoints
 - [ ] `python manage.py check` runs successfully
-- [ ] `python manage.py test core` runs successfully
-- [ ] no unnecessary files are tracked by git
-- [ ] Phase 3 is committed and pushed to git
+- [ ] `python manage.py test chats` runs successfully
+- [ ] Phase 4 is committed and pushed to git
 
 ---
 
@@ -580,14 +490,7 @@ Before moving to the next phase, the following items must be completed:
 The next phase is:
 
 ```text
-Phase 4 - CRUD APIs for Main Resources
+Phase 5 - AI Models and Initial Data Seeding
 ```
 
-In Phase 4, secure CRUD APIs will be implemented for:
-
-- Projects
-- Conversations
-- Assistants
-- AI Models
-
-The permissions and mixins created in Phase 3 will be used to keep all user data isolated.
+In Phase 5, default AI models and initial data will be prepared so the system can be tested more easily through Swagger and API calls.

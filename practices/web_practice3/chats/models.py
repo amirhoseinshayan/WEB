@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 
 
 def attachment_upload_path(instance, filename):
@@ -110,6 +111,26 @@ class AIModel(models.Model):
         ]
 
 
+class AssistantQuerySet(models.QuerySet):
+    """
+    QuerySet helpers for Assistant.
+    """
+
+    def public_or_owned(self, user):
+        if not user or not user.is_authenticated:
+            return self.none()
+
+        if user.is_staff or user.is_superuser:
+            return self
+
+        return self.filter(
+            Q(is_public=True) | Q(owner=user)
+        )
+
+    def filter_public_or_owned(self, user):
+        return self.public_or_owned(user)
+
+
 class Assistant(models.Model):
     """
     Represents a custom or public assistant.
@@ -141,6 +162,8 @@ class Assistant(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = AssistantQuerySet.as_manager()
 
     def clean(self):
         if not self.is_public and self.owner_id is None:
