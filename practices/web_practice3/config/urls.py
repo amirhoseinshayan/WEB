@@ -1,17 +1,21 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
 from core.views import health_check
 
 
 urlpatterns = [
+    # Django admin
     path('admin/', admin.site.urls),
 
     # Health check
     path('api/health/', health_check, name='health-check'),
+
+    # App API routes
+    path('api/', include('accounts.urls')),
 
     # API documentation
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

@@ -56,6 +56,49 @@ This project will include the following main features:
 
 ---
 
+## Implemented Phases
+
+### Phase 0 - Initial Project Setup
+
+Implemented:
+
+- Django project structure
+- Django REST Framework setup
+- JWT settings
+- Swagger settings
+- SQLite database configuration
+- Health check endpoint
+- Initial README
+- Initial `.gitignore` rules
+
+### Phase 1 - Database Models and Relationships
+
+Implemented models:
+
+- Custom User
+- LinkedAccount
+- SubscriptionPlan
+- Project
+- AIModel
+- Assistant
+- Conversation
+- Message
+- Attachment
+
+### Phase 2 - Authentication and User Profile
+
+Implemented:
+
+- User registration
+- Login with username or email
+- JWT access and refresh tokens
+- Token refresh endpoint
+- Authenticated user profile endpoint
+- Profile update endpoint
+- Swagger examples for authentication APIs
+
+---
+
 ## Project Structure
 
 ```text
@@ -65,7 +108,9 @@ web_practice3/
 │   ├── admin.py
 │   ├── apps.py
 │   ├── models.py
+│   ├── serializers.py
 │   ├── tests.py
+│   ├── urls.py
 │   └── views.py
 │
 ├── chats/
@@ -151,32 +196,21 @@ pip install -r requirements.txt
 
 ---
 
-## Installed Packages
-
-The main packages used in this project are:
-
-```text
-django
-djangorestframework
-djangorestframework-simplejwt
-drf-spectacular
-django-filter
-pillow
-```
-
----
-
 ## Run Project
 
 Before running the server, make sure the virtual environment is activated.
-
-First, check the Django project:
 
 ```powershell
 python manage.py check
 ```
 
-If there are no errors, run the development server:
+Apply migrations:
+
+```powershell
+python manage.py migrate
+```
+
+Run the development server:
 
 ```powershell
 python manage.py runserver
@@ -191,8 +225,6 @@ http://127.0.0.1:8000/
 ---
 
 ## API Health Check
-
-A simple health check endpoint is available to make sure Django and DRF are configured correctly.
 
 ```http
 GET /api/health/
@@ -212,6 +244,116 @@ Expected response:
   "project": "web_practice3",
   "phase": "0",
   "message": "Django and DRF are configured successfully."
+}
+```
+
+---
+
+## Authentication APIs
+
+### Register
+
+```http
+POST /api/auth/register/
+```
+
+Example request:
+
+```json
+{
+  "username": "amir",
+  "email": "amir@example.com",
+  "first_name": "Amir",
+  "last_name": "Shayan",
+  "password": "StrongPass123!",
+  "password_confirm": "StrongPass123!"
+}
+```
+
+### Login
+
+```http
+POST /api/auth/login/
+```
+
+Login can be done with either username or email.
+
+Example request:
+
+```json
+{
+  "identifier": "amir",
+  "password": "StrongPass123!"
+}
+```
+
+Example response:
+
+```json
+{
+  "message": "Login successful.",
+  "access": "jwt-access-token",
+  "refresh": "jwt-refresh-token",
+  "user": {
+    "id": 1,
+    "username": "amir",
+    "email": "amir@example.com",
+    "first_name": "Amir",
+    "last_name": "Shayan",
+    "subscription_type": "free",
+    "premium_until": null,
+    "is_premium": false,
+    "created_at": "2026-01-01T10:00:00Z",
+    "updated_at": "2026-01-01T10:00:00Z"
+  }
+}
+```
+
+### Refresh Token
+
+```http
+POST /api/auth/token/refresh/
+```
+
+Example request:
+
+```json
+{
+  "refresh": "jwt-refresh-token"
+}
+```
+
+### Get Profile
+
+```http
+GET /api/auth/profile/
+```
+
+Required header:
+
+```text
+Authorization: Bearer <access_token>
+```
+
+### Update Profile
+
+```http
+PATCH /api/auth/profile/
+```
+
+Required header:
+
+```text
+Authorization: Bearer <access_token>
+```
+
+Example request:
+
+```json
+{
+  "first_name": "Amirhosein",
+  "last_name": "Shayan",
+  "email": "amirhosein@example.com"
 }
 ```
 
@@ -239,50 +381,11 @@ http://127.0.0.1:8000/api/redoc/
 
 ---
 
-## Current Phase
-
-The project is currently in:
-
-```text
-Phase 0 - Initial Django/DRF Project Setup
-```
-
-In this phase, the following items are configured:
-
-- Django project structure
-- Django REST Framework
-- JWT authentication settings
-- Swagger documentation settings
-- SQLite database setting
-- Basic health check endpoint
-- Initial project README
-- Initial `.gitignore` rules for this practice
-
----
-
-## Important Note About Migrations
-
-Migrations are intentionally not executed in Phase 0.
-
-Reason:
-
-A custom user model will be added in Phase 1. It is better to define the custom user model before running the first migration, because changing the user model after migrations can cause unnecessary problems.
-
-So in Phase 0, do not run:
-
-```powershell
-python manage.py migrate
-```
-
-Migration commands will be executed after the custom user model is created in Phase 1.
-
----
-
 ## Database
 
 This project uses SQLite as required by the assignment.
 
-The default database file will be:
+The default database file is:
 
 ```text
 db.sqlite3
@@ -360,10 +463,28 @@ However, the following files should be committed:
 python manage.py check
 ```
 
+### Create migrations
+
+```powershell
+python manage.py makemigrations
+```
+
+### Apply migrations
+
+```powershell
+python manage.py migrate
+```
+
 ### Run development server
 
 ```powershell
 python manage.py runserver
+```
+
+### Create superuser
+
+```powershell
+python manage.py createsuperuser
 ```
 
 ### Create requirements file
@@ -380,34 +501,24 @@ pip install -r requirements.txt
 
 ---
 
-## Phase 0 Checklist
+## Phase 2 Checklist
 
-Before moving to Phase 1, the following items must be completed:
+Before moving to the next phase, the following items must be completed:
 
-- [ ] `web_practice3` folder is created
-- [ ] virtual environment is created
-- [ ] virtual environment is ignored by git
-- [ ] Django is installed
-- [ ] Django REST Framework is installed
-- [ ] SimpleJWT is installed
-- [ ] drf-spectacular is installed
-- [ ] django-filter is installed
-- [ ] Pillow is installed
-- [ ] Django project `config` is created
-- [ ] apps `core`, `accounts`, `chats`, and `subscriptions` are created
-- [ ] `settings.py` is configured
-- [ ] `urls.py` is configured
-- [ ] health check endpoint is added
-- [ ] Swagger endpoints are added
-- [ ] `requirements.txt` is created
-- [ ] `.env.example` is created
-- [ ] `README.md` is created
+- [ ] Register endpoint works correctly
+- [ ] Login endpoint works with username
+- [ ] Login endpoint works with email
+- [ ] JWT access token is returned after login
+- [ ] JWT refresh token is returned after login
+- [ ] Token refresh endpoint works
+- [ ] Profile endpoint requires authentication
+- [ ] Profile endpoint returns the current user
+- [ ] Profile update endpoint works
+- [ ] Duplicate username is rejected
+- [ ] Duplicate email is rejected
+- [ ] Swagger shows authentication endpoints
 - [ ] `python manage.py check` runs successfully
-- [ ] `python manage.py runserver` runs successfully
-- [ ] `/api/health/` works correctly
-- [ ] `/api/docs/` opens Swagger correctly
-- [ ] no unnecessary files are tracked by git
-- [ ] Phase 0 is committed and pushed to git
+- [ ] Phase 2 is committed and pushed to git
 
 ---
 
@@ -416,19 +527,7 @@ Before moving to Phase 1, the following items must be completed:
 The next phase is:
 
 ```text
-Phase 1 - Database Models and Relationships
+Phase 3 - Permissions and Data Isolation
 ```
 
-In Phase 1, the main database models will be implemented:
-
-- Custom User
-- Project
-- AIModel
-- Assistant
-- Conversation
-- Message
-- Attachment
-- SubscriptionPlan
-- LinkedAccount
-
-After the custom user model is created, migrations will be generated and applied.
+In Phase 3, object-level permissions and user data isolation will be implemented so users cannot access other users' projects, conversations, messages, or private assistants.
