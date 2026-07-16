@@ -97,6 +97,21 @@ Implemented:
 - Profile update endpoint
 - Swagger examples for authentication APIs
 
+### Phase 3 - Permissions and Data Isolation
+
+Implemented:
+
+- Reusable object-level permission classes
+- Owner-based permission helpers
+- Admin-or-read-only permission for AI models
+- Assistant permission rules for public and private assistants
+- QuerySet mixins for user-owned resources
+- QuerySet mixins for public-or-owned assistants
+- Soft delete mixin for conversations and messages
+- Nested conversation/project filtering helpers
+- Ownership helper methods on models
+- Data isolation tests
+
 ---
 
 ## Project Structure
@@ -131,7 +146,9 @@ web_practice3/
 │   ├── migrations/
 │   ├── admin.py
 │   ├── apps.py
+│   ├── mixins.py
 │   ├── models.py
+│   ├── permissions.py
 │   ├── tests.py
 │   └── views.py
 │
@@ -359,6 +376,32 @@ Example request:
 
 ---
 
+## Permission and Data Isolation Design
+
+The project uses reusable permission classes and mixins to keep user data isolated.
+
+Main rules:
+
+- Users can only access their own projects.
+- Users can only access their own conversations.
+- Users can only access messages inside their own conversations.
+- Users can only access attachments inside their own messages.
+- Private assistants are only available to their owner.
+- Public assistants are readable by authenticated users.
+- Public assistants can only be modified by admin users.
+- AI models are readable by authenticated users.
+- AI models can only be modified by admin users.
+- Conversations can be soft-deleted by changing their status to `deleted`.
+
+Main files:
+
+```text
+core/permissions.py
+core/mixins.py
+```
+
+---
+
 ## Swagger Documentation
 
 Swagger documentation is available at:
@@ -487,6 +530,18 @@ python manage.py runserver
 python manage.py createsuperuser
 ```
 
+### Run all tests
+
+```powershell
+python manage.py test
+```
+
+### Run Phase 3 tests
+
+```powershell
+python manage.py test core
+```
+
 ### Create requirements file
 
 ```powershell
@@ -501,24 +556,22 @@ pip install -r requirements.txt
 
 ---
 
-## Phase 2 Checklist
+## Phase 3 Checklist
 
 Before moving to the next phase, the following items must be completed:
 
-- [ ] Register endpoint works correctly
-- [ ] Login endpoint works with username
-- [ ] Login endpoint works with email
-- [ ] JWT access token is returned after login
-- [ ] JWT refresh token is returned after login
-- [ ] Token refresh endpoint works
-- [ ] Profile endpoint requires authentication
-- [ ] Profile endpoint returns the current user
-- [ ] Profile update endpoint works
-- [ ] Duplicate username is rejected
-- [ ] Duplicate email is rejected
-- [ ] Swagger shows authentication endpoints
+- [ ] `core/permissions.py` is created
+- [ ] `core/mixins.py` is created
+- [ ] ownership helper methods are added to chat models
+- [ ] public/private assistant access logic is added
+- [ ] AI model availability logic is added
+- [ ] conversation soft delete helper is added
+- [ ] message soft delete helper is added
+- [ ] data isolation tests are added
 - [ ] `python manage.py check` runs successfully
-- [ ] Phase 2 is committed and pushed to git
+- [ ] `python manage.py test core` runs successfully
+- [ ] no unnecessary files are tracked by git
+- [ ] Phase 3 is committed and pushed to git
 
 ---
 
@@ -527,7 +580,14 @@ Before moving to the next phase, the following items must be completed:
 The next phase is:
 
 ```text
-Phase 3 - Permissions and Data Isolation
+Phase 4 - CRUD APIs for Main Resources
 ```
 
-In Phase 3, object-level permissions and user data isolation will be implemented so users cannot access other users' projects, conversations, messages, or private assistants.
+In Phase 4, secure CRUD APIs will be implemented for:
+
+- Projects
+- Conversations
+- Assistants
+- AI Models
+
+The permissions and mixins created in Phase 3 will be used to keep all user data isolated.

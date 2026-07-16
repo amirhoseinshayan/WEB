@@ -36,6 +36,13 @@ class Project(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def is_owned_by(self, user):
+        return bool(
+            user
+            and user.is_authenticated
+            and self.owner_id == user.id
+        )
+
     def __str__(self):
         return self.title
 
@@ -70,6 +77,25 @@ class AIModel(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def is_available_to(self, user):
+        """
+        Check whether a user can use this AI model.
+
+        Free users can use only non-premium active models.
+        Premium users can use active premium and non-premium models.
+        """
+        if not self.is_active:
+            return False
+
+        if not self.is_premium:
+            return True
+
+        return bool(
+            user
+            and user.is_authenticated
+            and getattr(user, 'can_use_premium_features', False)
+        )
 
     def __str__(self):
         return f'{self.provider} - {self.name}'
@@ -119,6 +145,42 @@ class Assistant(models.Model):
     def clean(self):
         if not self.is_public and self.owner_id is None:
             raise ValidationError('Private assistants must have an owner.')
+
+    def is_owned_by(self, user):
+        return bool(
+            user
+            and user.is_authenticated
+            and self.owner_id == user.id
+        )
+
+    def is_available_to(self, user):
+        """
+        Public assistants are available to authenticated users.
+        Private assistants are only available to their owner.
+        """
+        if not user or not user.is_authenticated:
+            return False
+
+        if self.is_public:
+            return True
+
+        return self.is_owned_by(user)
+
+    def can_be_modified_by(self, user):
+        """
+        Private assistants can be modified by their owner.
+        Public assistants can only be modified by staff or superusers.
+        """
+        if not user or not user.is_authenticated:
+            return False
+
+        if user.is_staff or user.is_superuser:
+            return True
+
+        if self.is_public:
+            return False
+
+        return self.is_owned_by(user)
 
     def __str__(self):
         visibility = 'Public' if self.is_public else 'Private'
@@ -193,6 +255,20 @@ class Conversation(models.Model):
             if not self.assistant.is_public and self.assistant.owner_id != self.owner_id:
                 raise ValidationError('The selected assistant is not available for this user.')
 
+    def is_owned_by(self, user):
+        return bool(
+            user
+            and user.is_authenticated
+            and self.owner_id == user.id
+        )
+
+    def is_active_conversation(self):
+        return self.status == self.Status.ACTIVE
+
+    def soft_delete(self):
+        self.status = self.Status.DELETED
+        self.save(update_fields=['status', 'updated_at'])
+
     def __str__(self):
         return self.title or f'Conversation #{self.pk}'
 
@@ -237,6 +313,25 @@ class Message(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def owner(self):
+        return self.conversation.owner
+
+    @property
+    def owner_id(self):
+        return self.conversation.owner_id
+
+    def is_owned_by(self, user):
+        return bool(
+            user
+            and user.is_authenticated
+            and self.owner_id == user.id
+        )
+
+    def soft_delete(self):
+        self.is_deleted = True
+        self.save(update_fields=['is_deleted', 'updated_at'])
+
     def __str__(self):
         preview = self.content[:50] if self.content else 'Empty message'
         return f'{self.role}: {preview}'
@@ -276,10 +371,25 @@ class Attachment(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     @property
+    def owner(self):
+        return self.message.conversation.owner
+
+    @property
+    def owner_id(self):
+        return self.message.conversation.owner_id
+
+    @property
     def file_name(self):
         if not self.file:
             return ''
         return self.file.name.split('/')[-1]
+
+    def is_owned_by(self, user):
+        return bool(
+            user
+            and user.is_authenticated
+            and self.owner_id == user.id
+        )
 
     def save(self, *args, **kwargs):
         if self.file:
