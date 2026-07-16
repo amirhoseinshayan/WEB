@@ -1,4 +1,6 @@
+from django.db import transaction
 from django.db.models import Count
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import (
     OpenApiExample,
     OpenApiResponse,
@@ -7,7 +9,8 @@ from drf_spectacular.utils import (
 )
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.generics import ListCreateAPIView
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -21,18 +24,24 @@ from core.mixins import (
 from core.permissions import (
     IsAdminOrReadOnly,
     IsConversationOwner,
+    IsMessageOwner,
     IsOwner,
     IsPublicAssistantReadOnlyOrOwner,
 )
 
-from .models import AIModel, Assistant, Conversation, Project
+from .models import AIModel, Assistant, Conversation, Message, Project
 from .serializers import (
     AIModelSerializer,
     AssistantSerializer,
     ConversationAssistantUpdateSerializer,
     ConversationSerializer,
+    MessageCreateSerializer,
+    MessageSerializer,
+    MessageUpdateSerializer,
     ProjectSerializer,
+    SendMessageResponseSerializer,
 )
+from .services import generate_mock_ai_response
 
 
 @extend_schema_view(
@@ -93,12 +102,6 @@ from .serializers import (
     ),
 )
 class ProjectViewSet(UserOwnedQuerySetMixin, OwnerCreateMixin, viewsets.ModelViewSet):
-    """
-    CRUD API for projects.
-
-    Users can only access their own projects.
-    """
-
     serializer_class = ProjectSerializer
     permission_classes = [IsAuthenticated, IsOwner]
     owner_field = 'owner'
@@ -118,48 +121,7 @@ class ProjectViewSet(UserOwnedQuerySetMixin, OwnerCreateMixin, viewsets.ModelVie
     list=extend_schema(
         tags=['AI Models'],
         summary='List active AI models',
-        description=(
-            'Returns active AI models. The field '
-            '`is_available_for_current_user` shows whether the authenticated '
-            'user can select each model. Premium models return false for free users.'
-        ),
         responses={200: AIModelSerializer(many=True)},
-        examples=[
-            OpenApiExample(
-                name='AI Models List Response',
-                value={
-                    'count': 4,
-                    'next': None,
-                    'previous': None,
-                    'results': [
-                        {
-                            'id': 1,
-                            'name': 'GPT-3.5',
-                            'provider': 'OpenAI',
-                            'description': 'Basic free model for regular users.',
-                            'is_active': True,
-                            'is_premium': False,
-                            'is_available_for_current_user': True,
-                            'created_at': '2026-01-01T10:00:00Z',
-                            'updated_at': '2026-01-01T10:00:00Z',
-                        },
-                        {
-                            'id': 2,
-                            'name': 'GPT-4',
-                            'provider': 'OpenAI',
-                            'description': 'Premium model with stronger reasoning capabilities.',
-                            'is_active': True,
-                            'is_premium': True,
-                            'is_available_for_current_user': False,
-                            'created_at': '2026-01-01T10:00:00Z',
-                            'updated_at': '2026-01-01T10:00:00Z',
-                        },
-                    ],
-                },
-                response_only=True,
-                status_codes=['200'],
-            )
-        ],
     ),
     retrieve=extend_schema(
         tags=['AI Models'],
@@ -177,19 +139,6 @@ class ProjectViewSet(UserOwnedQuerySetMixin, OwnerCreateMixin, viewsets.ModelVie
             201: AIModelSerializer,
             403: OpenApiResponse(description='Only admins can create models.'),
         },
-        examples=[
-            OpenApiExample(
-                name='Create AI Model Request',
-                value={
-                    'name': 'GPT-4',
-                    'provider': 'OpenAI',
-                    'description': 'Premium reasoning model',
-                    'is_active': True,
-                    'is_premium': True,
-                },
-                request_only=True,
-            )
-        ],
     ),
     update=extend_schema(
         tags=['AI Models'],
@@ -210,13 +159,6 @@ class ProjectViewSet(UserOwnedQuerySetMixin, OwnerCreateMixin, viewsets.ModelVie
     ),
 )
 class AIModelViewSet(viewsets.ModelViewSet):
-    """
-    CRUD API for AI models.
-
-    Authenticated users can read active models.
-    Only staff/superusers can create, update, or delete AI models.
-    """
-
     serializer_class = AIModelSerializer
     permission_classes = [IsAuthenticated, IsAdminOrReadOnly]
 
@@ -250,18 +192,6 @@ class AIModelViewSet(viewsets.ModelViewSet):
         summary='Create a private assistant',
         request=AssistantSerializer,
         responses={201: AssistantSerializer},
-        examples=[
-            OpenApiExample(
-                name='Create Assistant Request',
-                value={
-                    'title': 'Coding Assistant',
-                    'description': 'Helps with programming questions.',
-                    'system_prompt': 'You are a helpful coding assistant.',
-                    'is_public': False,
-                },
-                request_only=True,
-            )
-        ],
     ),
     update=extend_schema(
         tags=['Assistants'],
@@ -282,16 +212,6 @@ class AIModelViewSet(viewsets.ModelViewSet):
     ),
 )
 class AssistantViewSet(PublicOrOwnerAssistantQuerySetMixin, viewsets.ModelViewSet):
-    """
-    CRUD API for assistants.
-
-    Rules:
-    - Users can see public assistants.
-    - Users can see and manage their own private assistants.
-    - Normal users cannot create public assistants.
-    - Public assistants can only be modified by admins.
-    """
-
     serializer_class = AssistantSerializer
     permission_classes = [IsAuthenticated, IsPublicAssistantReadOnlyOrOwner]
 
@@ -328,9 +248,6 @@ class AssistantViewSet(PublicOrOwnerAssistantQuerySetMixin, viewsets.ModelViewSe
     )
     @action(detail=False, methods=['get'], url_path='public')
     def public(self, request):
-        """
-        List only public assistants.
-        """
         queryset = (
             Assistant.objects
             .filter(is_public=True)
@@ -354,9 +271,6 @@ class AssistantViewSet(PublicOrOwnerAssistantQuerySetMixin, viewsets.ModelViewSe
     )
     @action(detail=False, methods=['get'], url_path='mine')
     def mine(self, request):
-        """
-        List only private assistants owned by the current user.
-        """
         queryset = (
             Assistant.objects
             .filter(owner=request.user, is_public=False)
@@ -393,18 +307,6 @@ class AssistantViewSet(PublicOrOwnerAssistantQuerySetMixin, viewsets.ModelViewSe
         summary='Create a new conversation',
         request=ConversationSerializer,
         responses={201: ConversationSerializer},
-        examples=[
-            OpenApiExample(
-                name='Create Conversation Request',
-                value={
-                    'project': 1,
-                    'ai_model': 1,
-                    'assistant': 1,
-                    'title': 'My first chat',
-                },
-                request_only=True,
-            )
-        ],
     ),
     update=extend_schema(
         tags=['Conversations'],
@@ -417,15 +319,6 @@ class AssistantViewSet(PublicOrOwnerAssistantQuerySetMixin, viewsets.ModelViewSe
         summary='Partially update a conversation',
         request=ConversationSerializer,
         responses={200: ConversationSerializer},
-        examples=[
-            OpenApiExample(
-                name='Update Conversation Request',
-                value={
-                    'title': 'Updated chat title',
-                },
-                request_only=True,
-            )
-        ],
     ),
     destroy=extend_schema(
         tags=['Conversations'],
@@ -439,13 +332,6 @@ class ConversationViewSet(
     SoftDeleteMixin,
     viewsets.ModelViewSet,
 ):
-    """
-    CRUD API for conversations.
-
-    Users can only access their own conversations.
-    Delete is implemented as soft delete by changing status to deleted.
-    """
-
     serializer_class = ConversationSerializer
     permission_classes = [IsAuthenticated, IsConversationOwner]
     owner_field = 'owner'
@@ -497,9 +383,6 @@ class ConversationViewSet(
     )
     @action(detail=True, methods=['patch'], url_path='assistant')
     def assistant(self, request, pk=None):
-        """
-        Select, change, or clear assistant for a conversation.
-        """
         conversation = self.get_object()
 
         serializer = ConversationAssistantUpdateSerializer(
@@ -528,10 +411,6 @@ class ConversationViewSet(
     },
 )
 class ProjectConversationsAPIView(ListAPIView):
-    """
-    List conversations that belong to a specific project owned by the current user.
-    """
-
     serializer_class = ConversationSerializer
     permission_classes = [IsAuthenticated]
 
@@ -548,4 +427,217 @@ class ProjectConversationsAPIView(ListAPIView):
             )
             .exclude(status=Conversation.Status.DELETED)
             .order_by('-created_at')
+        )
+
+
+@extend_schema_view(
+    list=extend_schema(
+        tags=['Messages'],
+        summary='List current user messages',
+        responses={200: MessageSerializer(many=True)},
+    ),
+    retrieve=extend_schema(
+        tags=['Messages'],
+        summary='Retrieve a message owned by current user',
+        responses={
+            200: MessageSerializer,
+            404: OpenApiResponse(description='Message not found.'),
+        },
+    ),
+    partial_update=extend_schema(
+        tags=['Messages'],
+        summary='Edit a user message',
+        request=MessageUpdateSerializer,
+        responses={
+            200: MessageSerializer,
+            400: OpenApiResponse(description='Only user messages can be edited.'),
+        },
+    ),
+    destroy=extend_schema(
+        tags=['Messages'],
+        summary='Soft delete a message',
+        responses={204: OpenApiResponse(description='Message soft deleted successfully.')},
+    ),
+)
+class MessageViewSet(viewsets.ModelViewSet):
+    """
+    API for reading, editing, and deleting messages.
+
+    Message creation must be done through:
+    POST /api/conversations/<conversation_id>/messages/
+    """
+
+    permission_classes = [IsAuthenticated, IsMessageOwner]
+    http_method_names = ['get', 'patch', 'delete', 'head', 'options']
+
+    def get_queryset(self):
+        return (
+            Message.objects
+            .select_related('conversation', 'conversation__owner')
+            .prefetch_related('attachments')
+            .annotate(attachments_count=Count('attachments'))
+            .filter(conversation__owner=self.request.user, is_deleted=False)
+            .order_by('created_at')
+        )
+
+    def get_serializer_class(self):
+        if self.action == 'partial_update':
+            return MessageUpdateSerializer
+
+        return MessageSerializer
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        serializer = self.get_serializer(
+            instance,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        response_serializer = MessageSerializer(
+            instance,
+            context={'request': request},
+        )
+
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+    def perform_destroy(self, instance):
+        instance.soft_delete()
+
+
+@extend_schema_view(
+    get=extend_schema(
+        tags=['Messages'],
+        summary='Get paginated message history of a conversation',
+        responses={
+            200: MessageSerializer(many=True),
+            404: OpenApiResponse(description='Conversation not found.'),
+        },
+    ),
+    post=extend_schema(
+        tags=['Messages'],
+        summary='Send a message and receive a mock AI response',
+        request=MessageCreateSerializer,
+        responses={
+            201: SendMessageResponseSerializer,
+            400: OpenApiResponse(description='Invalid message or inactive conversation.'),
+            404: OpenApiResponse(description='Conversation not found.'),
+        },
+        examples=[
+            OpenApiExample(
+                name='Send Message Request',
+                value={
+                    'content': 'Hello, explain Django REST Framework shortly.',
+                },
+                request_only=True,
+            )
+        ],
+    ),
+)
+class ConversationMessagesAPIView(ListCreateAPIView):
+    """
+    GET:
+    Return message history of a conversation.
+
+    POST:
+    Store user's message and generate a mock assistant response.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get_conversation(self):
+        if hasattr(self, '_conversation'):
+            return self._conversation
+
+        conversation_id = self.kwargs.get('conversation_id')
+
+        self._conversation = get_object_or_404(
+            Conversation.objects.select_related('owner', 'ai_model', 'assistant'),
+            id=conversation_id,
+            owner=self.request.user,
+        )
+
+        if self._conversation.status == Conversation.Status.DELETED:
+            raise ValidationError('This conversation is deleted.')
+
+        return self._conversation
+
+    def get_queryset(self):
+        conversation = self.get_conversation()
+
+        return (
+            Message.objects
+            .select_related('conversation', 'conversation__owner')
+            .prefetch_related('attachments')
+            .annotate(attachments_count=Count('attachments'))
+            .filter(conversation=conversation, is_deleted=False)
+            .order_by('created_at')
+        )
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return MessageCreateSerializer
+
+        return MessageSerializer
+
+    def create(self, request, *args, **kwargs):
+        conversation = self.get_conversation()
+
+        if conversation.status != Conversation.Status.ACTIVE:
+            raise ValidationError('Messages can only be sent to active conversations.')
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        content = serializer.validated_data['content']
+
+        with transaction.atomic():
+            user_message = Message.objects.create(
+                conversation=conversation,
+                role=Message.Role.USER,
+                content=content,
+            )
+
+            assistant_message = Message.objects.create(
+                conversation=conversation,
+                role=Message.Role.ASSISTANT,
+                content=generate_mock_ai_response(conversation, user_message),
+            )
+
+            default_title = f'Conversation #{conversation.id}'
+
+            if not conversation.title or conversation.title == default_title:
+                conversation.title = content[:60]
+                conversation.save(update_fields=['title', 'updated_at'])
+
+        user_message = (
+            Message.objects
+            .select_related('conversation', 'conversation__owner')
+            .annotate(attachments_count=Count('attachments'))
+            .get(id=user_message.id)
+        )
+
+        assistant_message = (
+            Message.objects
+            .select_related('conversation', 'conversation__owner')
+            .annotate(attachments_count=Count('attachments'))
+            .get(id=assistant_message.id)
+        )
+
+        return Response(
+            {
+                'message': 'Message sent successfully.',
+                'user_message': MessageSerializer(
+                    user_message,
+                    context={'request': request},
+                ).data,
+                'assistant_message': MessageSerializer(
+                    assistant_message,
+                    context={'request': request},
+                ).data,
+            },
+            status=status.HTTP_201_CREATED,
         )

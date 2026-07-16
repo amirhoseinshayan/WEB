@@ -2,7 +2,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from .models import AIModel, Assistant, Conversation, Project
+from .models import AIModel, Assistant, Conversation, Message, Project
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -47,12 +47,6 @@ class ProjectSerializer(serializers.ModelSerializer):
 class AIModelSerializer(serializers.ModelSerializer):
     """
     Serializer for AI models.
-
-    Normal users can read AI models.
-    Only staff/superusers can create, update, or delete them.
-
-    The field is_available_for_current_user shows whether the authenticated
-    user can actually select this model in a conversation.
     """
 
     is_available_for_current_user = serializers.SerializerMethodField()
@@ -106,10 +100,6 @@ class AIModelSerializer(serializers.ModelSerializer):
 class AssistantSerializer(serializers.ModelSerializer):
     """
     Serializer for public and private assistants.
-
-    Extra computed fields:
-    - is_available_for_current_user
-    - can_modify_current_user
     """
 
     owner = serializers.IntegerField(source='owner_id', read_only=True)
@@ -198,11 +188,6 @@ class AssistantSerializer(serializers.ModelSerializer):
 class ConversationSerializer(serializers.ModelSerializer):
     """
     Serializer for conversations.
-
-    It validates cross-references:
-    - selected project must belong to current user
-    - selected assistant must be public or owned by current user
-    - selected model must be active and available to current user
     """
 
     owner = serializers.IntegerField(source='owner_id', read_only=True)
@@ -307,16 +292,6 @@ class ConversationSerializer(serializers.ModelSerializer):
 class ConversationAssistantUpdateSerializer(serializers.Serializer):
     """
     Serializer for selecting, changing, or clearing the assistant of a conversation.
-
-    Send:
-    {
-        "assistant": 1
-    }
-
-    To clear assistant:
-    {
-        "assistant": null
-    }
     """
 
     assistant = serializers.PrimaryKeyRelatedField(
@@ -337,3 +312,109 @@ class ConversationAssistantUpdateSerializer(serializers.Serializer):
             )
 
         return value
+
+
+class MessageSerializer(serializers.ModelSerializer):
+    """
+    Serializer for reading messages.
+    """
+
+    conversation_title = serializers.CharField(source='conversation.title', read_only=True)
+    owner = serializers.IntegerField(source='owner_id', read_only=True)
+    attachments_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Message
+        fields = (
+            'id',
+            'conversation',
+            'conversation_title',
+            'owner',
+            'role',
+            'content',
+            'is_edited',
+            'is_deleted',
+            'attachments_count',
+            'created_at',
+            'updated_at',
+        )
+        read_only_fields = (
+            'id',
+            'conversation',
+            'conversation_title',
+            'owner',
+            'role',
+            'is_edited',
+            'is_deleted',
+            'attachments_count',
+            'created_at',
+            'updated_at',
+        )
+
+
+class MessageCreateSerializer(serializers.Serializer):
+    """
+    Serializer for sending a new user message to a conversation.
+    """
+
+    content = serializers.CharField()
+
+    def validate_content(self, value):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError('Message content cannot be empty.')
+
+        return value
+
+
+class MessageUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for editing a user message.
+    """
+
+    class Meta:
+        model = Message
+        fields = (
+            'id',
+            'content',
+            'is_edited',
+            'updated_at',
+        )
+        read_only_fields = (
+            'id',
+            'is_edited',
+            'updated_at',
+        )
+
+    def validate_content(self, value):
+        value = value.strip()
+
+        if not value:
+            raise serializers.ValidationError('Message content cannot be empty.')
+
+        return value
+
+    def validate(self, attrs):
+        if self.instance is not None and self.instance.role != Message.Role.USER:
+            raise serializers.ValidationError(
+                'Only user messages can be edited.'
+            )
+
+        return attrs
+
+    def update(self, instance, validated_data):
+        instance.content = validated_data.get('content', instance.content).strip()
+        instance.is_edited = True
+        instance.save(update_fields=['content', 'is_edited', 'updated_at'])
+        return instance
+
+
+class SendMessageResponseSerializer(serializers.Serializer):
+    """
+    Response serializer for sending a message and receiving a mock AI response.
+    """
+
+    message = serializers.CharField()
+    user_message = MessageSerializer()
+    assistant_message = MessageSerializer()

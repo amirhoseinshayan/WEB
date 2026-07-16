@@ -6,18 +6,6 @@ The goal of this project is to implement the backend of a simplified ChatGPT-sty
 
 ---
 
-## Project Information
-
-- Course: Web Programming
-- Assignment: Web Practice 3
-- Topic: ChatGPT-like Backend
-- Framework: Django + Django REST Framework
-- Database: SQLite
-- Authentication: JWT
-- API Documentation: Swagger using drf-spectacular
-
----
-
 ## Tech Stack
 
 - Python
@@ -44,12 +32,10 @@ Implemented:
 - Swagger settings
 - SQLite database configuration
 - Health check endpoint
-- Initial README
-- Initial `.gitignore` rules
 
 ### Phase 1 - Database Models and Relationships
 
-Implemented models:
+Implemented:
 
 - Custom User
 - LinkedAccount
@@ -71,21 +57,15 @@ Implemented:
 - Token refresh endpoint
 - Authenticated user profile endpoint
 - Profile update endpoint
-- Swagger examples for authentication APIs
 
 ### Phase 3 - Permissions and Data Isolation
 
 Implemented:
 
-- Reusable object-level permission classes
-- Owner-based permission helpers
-- Admin-or-read-only permission for AI models
-- Assistant permission rules for public and private assistants
-- QuerySet mixins for user-owned resources
-- QuerySet mixins for public-or-owned assistants
-- Soft delete mixin for conversations and messages
-- Nested conversation/project filtering helpers
-- Ownership helper methods on models
+- Reusable permission classes
+- Owner-based access checks
+- QuerySet mixins
+- Soft delete helpers
 - Data isolation tests
 
 ### Phase 4 - CRUD APIs for Main Resources
@@ -94,136 +74,58 @@ Implemented:
 
 - Project CRUD API
 - AI Model CRUD API with admin-only write access
-- Assistant CRUD API with public/private access rules
-- Conversation CRUD API with soft delete
+- Assistant CRUD API
+- Conversation CRUD API
 - Project conversations endpoint
-- Swagger documentation for main resources
-- API tests for CRUD and data isolation
 
 ### Phase 5 - AI Models and Initial Data Seeding
 
 Implemented:
 
-- `seed_initial_data` management command
+- `seed_initial_data` command
 - Default AI models
 - Default public assistants
 - Default subscription plans
-- Idempotent initial data creation
-- AI model availability flag in API response
-- Tests for initial data seeding
+- AI model availability flag
 
 ### Phase 6 - Assistant Improvements and Conversation Assistant Selection
 
 Implemented:
 
-- Assistant availability flag for current user
-- Assistant modification permission flag for current user
 - Public assistants endpoint
 - Current user's private assistants endpoint
+- Assistant availability flags
 - Conversation assistant selection endpoint
-- Conversation assistant clearing support
-- Validation against selecting another user's private assistant
-- Tests for assistant selection and access rules
 
----
+### Phase 7 - Conversation Messages and Mock AI Responses
 
-## Project Structure
+Implemented:
 
-```text
-web_practice3/
-├── accounts/
-│   ├── migrations/
-│   ├── admin.py
-│   ├── apps.py
-│   ├── models.py
-│   ├── serializers.py
-│   ├── tests.py
-│   ├── urls.py
-│   └── views.py
-│
-├── chats/
-│   ├── migrations/
-│   ├── admin.py
-│   ├── apps.py
-│   ├── models.py
-│   ├── serializers.py
-│   ├── tests.py
-│   ├── urls.py
-│   └── views.py
-│
-├── config/
-│   ├── asgi.py
-│   ├── settings.py
-│   ├── urls.py
-│   └── wsgi.py
-│
-├── core/
-│   ├── management/
-│   │   ├── __init__.py
-│   │   └── commands/
-│   │       ├── __init__.py
-│   │       └── seed_initial_data.py
-│   ├── migrations/
-│   ├── admin.py
-│   ├── apps.py
-│   ├── mixins.py
-│   ├── models.py
-│   ├── permissions.py
-│   ├── test_seed_initial_data.py
-│   ├── tests.py
-│   └── views.py
-│
-├── subscriptions/
-│   ├── migrations/
-│   ├── admin.py
-│   ├── apps.py
-│   ├── models.py
-│   ├── tests.py
-│   └── views.py
-│
-├── media/
-├── static/
-├── templates/
-├── .env.example
-├── manage.py
-├── README.md
-└── requirements.txt
-```
+- Conversation message history endpoint
+- Send message endpoint
+- Mock assistant response generation
+- User message storage
+- Assistant message storage
+- Message list/retrieve API
+- User message edit API
+- Message soft delete API
+- Message access isolation tests
 
 ---
 
 ## Setup on Windows
 
-### 1. Go to the project directory
-
 ```powershell
 cd practices\web_practice3
-```
-
-### 2. Create a virtual environment
-
-```powershell
 py -m venv .venv
-```
-
-### 3. Activate the virtual environment
-
-If you are using PowerShell:
-
-```powershell
 .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 ```
 
-If you are using CMD:
+For CMD:
 
 ```cmd
 .\.venv\Scripts\activate.bat
-```
-
-### 4. Install dependencies
-
-```powershell
-pip install -r requirements.txt
 ```
 
 ---
@@ -245,48 +147,7 @@ http://127.0.0.1:8000/
 
 ---
 
-## Initial Data Seeding
-
-To create default AI models, public assistants, and subscription plans, run:
-
-```powershell
-python manage.py seed_initial_data
-```
-
-This command is idempotent, so it can be executed multiple times without creating duplicate records.
-
-It creates default AI models:
-
-```text
-GPT-3.5
-GPT-4
-Claude-3
-Llama-3
-```
-
-It creates default public assistants:
-
-```text
-General Assistant
-Coding Assistant
-Translator Assistant
-Academic Writing Assistant
-Literary Critic
-```
-
-It creates default subscription plans:
-
-```text
-Free Plan
-Premium Monthly
-Premium Yearly
-```
-
----
-
 ## Swagger Documentation
-
-Swagger documentation:
 
 ```text
 http://127.0.0.1:8000/api/docs/
@@ -298,7 +159,7 @@ OpenAPI schema:
 http://127.0.0.1:8000/api/schema/
 ```
 
-ReDoc documentation:
+ReDoc:
 
 ```text
 http://127.0.0.1:8000/api/redoc/
@@ -306,58 +167,17 @@ http://127.0.0.1:8000/api/redoc/
 
 ---
 
-## Health Check
-
-```http
-GET /api/health/
-```
-
-Expected response:
-
-```json
-{
-  "status": "ok",
-  "project": "web_practice3",
-  "phase": "0",
-  "message": "Django and DRF are configured successfully."
-}
-```
-
----
-
 ## Authentication APIs
 
-### Register
-
 ```http
-POST /api/auth/register/
-```
-
-### Login
-
-```http
-POST /api/auth/login/
-```
-
-### Refresh Token
-
-```http
-POST /api/auth/token/refresh/
-```
-
-### Get Profile
-
-```http
-GET /api/auth/profile/
-```
-
-### Update Profile
-
-```http
+POST  /api/auth/register/
+POST  /api/auth/login/
+POST  /api/auth/token/refresh/
+GET   /api/auth/profile/
 PATCH /api/auth/profile/
 ```
 
-Protected endpoints require this header:
+Protected endpoints require:
 
 ```text
 Authorization: Bearer <access_token>
@@ -395,13 +215,8 @@ POST    /api/assistants/
 GET     /api/assistants/<id>/
 PATCH   /api/assistants/<id>/
 DELETE  /api/assistants/<id>/
-```
-
-### Assistant Helper Endpoints
-
-```http
-GET /api/assistants/public/
-GET /api/assistants/mine/
+GET     /api/assistants/public/
+GET     /api/assistants/mine/
 ```
 
 ### Conversations
@@ -412,144 +227,98 @@ POST    /api/conversations/
 GET     /api/conversations/<id>/
 PATCH   /api/conversations/<id>/
 DELETE  /api/conversations/<id>/
+PATCH   /api/conversations/<id>/assistant/
 ```
 
-### Conversation Assistant Selection
+### Conversation Messages
 
 ```http
-PATCH /api/conversations/<conversation_id>/assistant/
+GET  /api/conversations/<conversation_id>/messages/
+POST /api/conversations/<conversation_id>/messages/
 ```
 
-Select assistant:
+Send message request:
 
 ```json
 {
-  "assistant": 1
+  "content": "Hello, explain Django REST Framework shortly."
 }
 ```
 
-Clear assistant:
+Send message response:
 
 ```json
 {
-  "assistant": null
+  "message": "Message sent successfully.",
+  "user_message": {
+    "id": 1,
+    "role": "user",
+    "content": "Hello, explain Django REST Framework shortly."
+  },
+  "assistant_message": {
+    "id": 2,
+    "role": "assistant",
+    "content": "[Mock response from OpenAI GPT-3.5] ..."
+  }
 }
 ```
 
-### Project Conversations
+### Messages
 
 ```http
-GET /api/projects/<project_id>/conversations/
+GET     /api/messages/
+GET     /api/messages/<message_id>/
+PATCH   /api/messages/<message_id>/
+DELETE  /api/messages/<message_id>/
+```
+
+Edit user message:
+
+```json
+{
+  "content": "Edited message text"
+}
 ```
 
 ---
 
-## Permission and Data Isolation Design
-
-Main rules:
-
-- Users can only access their own projects.
-- Users can only access their own conversations.
-- Users can only access messages inside their own conversations.
-- Users can only access attachments inside their own messages.
-- Private assistants are only available to their owner.
-- Public assistants are readable by authenticated users.
-- Public assistants can only be modified by admin users.
-- AI models are readable by authenticated users.
-- AI models can only be modified by admin users.
-- Conversations are soft-deleted by changing their status to `deleted`.
-- Users cannot select another user's private assistant for a conversation.
-- Users can select public assistants for their own conversations.
-- Users can clear the assistant of their own conversations.
-
-Main files:
-
-```text
-core/permissions.py
-core/mixins.py
-```
-
----
-
-## Database
-
-This project uses SQLite as required by the assignment.
-
-The default database file is:
-
-```text
-db.sqlite3
-```
-
-This file is ignored by git and should not be pushed to the repository.
-
----
-
-## Git Ignore Notes
-
-The following files and folders should not be committed:
-
-- `.venv/`
-- `venv/`
-- `env/`
-- `__pycache__/`
-- `.env`
-- `.env.*`
-- `db.sqlite3`
-- `media/`
-- `staticfiles/`
-- cache files
-- coverage files
-- local IDE files
-
-However, the following files should be committed:
-
-- source code files
-- app folders
-- migration files
-- management commands
-- `requirements.txt`
-- `README.md`
-- `.env.example`
-
----
-
-## Useful Commands
-
-### Check Django project
-
-```powershell
-python manage.py check
-```
-
-### Create migrations
-
-```powershell
-python manage.py makemigrations
-```
-
-### Apply migrations
-
-```powershell
-python manage.py migrate
-```
-
-### Seed initial data
+## Initial Data Seeding
 
 ```powershell
 python manage.py seed_initial_data
 ```
 
-### Run development server
+Creates:
 
-```powershell
-python manage.py runserver
+```text
+GPT-3.5
+GPT-4
+Claude-3
+Llama-3
+General Assistant
+Coding Assistant
+Translator Assistant
+Academic Writing Assistant
+Literary Critic
+Free Plan
+Premium Monthly
+Premium Yearly
 ```
 
-### Create superuser
+---
+
+## Useful Commands
+
+### Check project
 
 ```powershell
-python manage.py createsuperuser
+python manage.py check
+```
+
+### Check migrations
+
+```powershell
+python manage.py makemigrations --check --dry-run
 ```
 
 ### Run all tests
@@ -558,59 +327,44 @@ python manage.py createsuperuser
 python manage.py test
 ```
 
-### Run Phase 3 tests
+### Run Phase 7 tests
 
 ```powershell
-python manage.py test core
+python manage.py test chats.test_messages
 ```
 
-### Run Phase 4 tests
+### Run chats tests
 
 ```powershell
 python manage.py test chats
 ```
 
-### Run Phase 5 seed tests
-
-```powershell
-python manage.py test core.test_seed_initial_data
-```
-
-### Run Phase 6 assistant tests
-
-```powershell
-python manage.py test chats.Phase6AssistantSelectionTests
-```
-
 ---
 
-## Phase 6 Checklist
+## Phase 7 Checklist
 
-Before moving to the next phase, the following items must be completed:
-
-- [ ] `AssistantSerializer` includes `is_available_for_current_user`
-- [ ] `AssistantSerializer` includes `can_modify_current_user`
-- [ ] `GET /api/assistants/public/` works
-- [ ] `GET /api/assistants/mine/` works
-- [ ] `PATCH /api/conversations/<id>/assistant/` works
-- [ ] users can select public assistants
-- [ ] users can select their own private assistants
-- [ ] users cannot select another user's private assistant
-- [ ] users can clear assistant from their own conversation
-- [ ] users cannot change assistant of another user's conversation
-- [ ] Swagger shows new endpoints
-- [ ] `python manage.py check` runs successfully
-- [ ] `python manage.py test chats.Phase6AssistantSelectionTests` runs successfully
-- [ ] Phase 6 is committed and pushed to git
+- [ ] `chats/services.py` is created
+- [ ] `MessageSerializer` is added
+- [ ] `MessageCreateSerializer` is added
+- [ ] `MessageUpdateSerializer` is added
+- [ ] `SendMessageResponseSerializer` is added
+- [ ] `GET /api/conversations/<conversation_id>/messages/` works
+- [ ] `POST /api/conversations/<conversation_id>/messages/` works
+- [ ] user message is saved
+- [ ] mock assistant response is saved
+- [ ] `GET /api/messages/` works
+- [ ] `GET /api/messages/<id>/` works
+- [ ] `PATCH /api/messages/<id>/` works for user messages
+- [ ] assistant messages cannot be edited
+- [ ] `DELETE /api/messages/<id>/` performs soft delete
+- [ ] users cannot access messages from other users' conversations
+- [ ] Swagger shows message endpoints
+- [ ] `python manage.py test chats.test_messages` passes
 
 ---
 
 ## Next Phase
 
-The next phase is:
-
 ```text
-Phase 7 - Conversation Messages and Mock AI Responses
+Phase 8 - Subscription System and Free User Limits
 ```
-
-In Phase 7, message sending, conversation history, and mock AI responses will be implemented.
