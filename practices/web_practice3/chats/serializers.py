@@ -106,10 +106,16 @@ class AIModelSerializer(serializers.ModelSerializer):
 class AssistantSerializer(serializers.ModelSerializer):
     """
     Serializer for public and private assistants.
+
+    Extra computed fields:
+    - is_available_for_current_user
+    - can_modify_current_user
     """
 
     owner = serializers.IntegerField(source='owner_id', read_only=True)
     owner_username = serializers.CharField(source='owner.username', read_only=True)
+    is_available_for_current_user = serializers.SerializerMethodField()
+    can_modify_current_user = serializers.SerializerMethodField()
 
     class Meta:
         model = Assistant
@@ -121,6 +127,8 @@ class AssistantSerializer(serializers.ModelSerializer):
             'description',
             'system_prompt',
             'is_public',
+            'is_available_for_current_user',
+            'can_modify_current_user',
             'created_at',
             'updated_at',
         )
@@ -128,9 +136,29 @@ class AssistantSerializer(serializers.ModelSerializer):
             'id',
             'owner',
             'owner_username',
+            'is_available_for_current_user',
+            'can_modify_current_user',
             'created_at',
             'updated_at',
         )
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_is_available_for_current_user(self, obj):
+        request = self.context.get('request')
+
+        if request is None:
+            return False
+
+        return obj.is_available_to(request.user)
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_can_modify_current_user(self, obj):
+        request = self.context.get('request')
+
+        if request is None:
+            return False
+
+        return obj.can_be_modified_by(request.user)
 
     def validate_title(self, value):
         value = value.strip()
@@ -274,3 +302,38 @@ class ConversationSerializer(serializers.ModelSerializer):
             })
 
         return attrs
+
+
+class ConversationAssistantUpdateSerializer(serializers.Serializer):
+    """
+    Serializer for selecting, changing, or clearing the assistant of a conversation.
+
+    Send:
+    {
+        "assistant": 1
+    }
+
+    To clear assistant:
+    {
+        "assistant": null
+    }
+    """
+
+    assistant = serializers.PrimaryKeyRelatedField(
+        queryset=Assistant.objects.all(),
+        required=True,
+        allow_null=True,
+    )
+
+    def validate_assistant(self, value):
+        request = self.context.get('request')
+
+        if request is None or not request.user.is_authenticated:
+            raise serializers.ValidationError('Authentication is required.')
+
+        if value is not None and not value.is_available_to(request.user):
+            raise serializers.ValidationError(
+                'The selected assistant is not available for your account.'
+            )
+
+        return value

@@ -112,6 +112,19 @@ Implemented:
 - AI model availability flag in API response
 - Tests for initial data seeding
 
+### Phase 6 - Assistant Improvements and Conversation Assistant Selection
+
+Implemented:
+
+- Assistant availability flag for current user
+- Assistant modification permission flag for current user
+- Public assistants endpoint
+- Current user's private assistants endpoint
+- Conversation assistant selection endpoint
+- Conversation assistant clearing support
+- Validation against selecting another user's private assistant
+- Tests for assistant selection and access rules
+
 ---
 
 ## Project Structure
@@ -384,6 +397,13 @@ PATCH   /api/assistants/<id>/
 DELETE  /api/assistants/<id>/
 ```
 
+### Assistant Helper Endpoints
+
+```http
+GET /api/assistants/public/
+GET /api/assistants/mine/
+```
+
 ### Conversations
 
 ```http
@@ -392,6 +412,28 @@ POST    /api/conversations/
 GET     /api/conversations/<id>/
 PATCH   /api/conversations/<id>/
 DELETE  /api/conversations/<id>/
+```
+
+### Conversation Assistant Selection
+
+```http
+PATCH /api/conversations/<conversation_id>/assistant/
+```
+
+Select assistant:
+
+```json
+{
+  "assistant": 1
+}
+```
+
+Clear assistant:
+
+```json
+{
+  "assistant": null
+}
 ```
 
 ### Project Conversations
@@ -416,6 +458,9 @@ Main rules:
 - AI models are readable by authenticated users.
 - AI models can only be modified by admin users.
 - Conversations are soft-deleted by changing their status to `deleted`.
+- Users cannot select another user's private assistant for a conversation.
+- Users can select public assistants for their own conversations.
+- Users can clear the assistant of their own conversations.
 
 Main files:
 
@@ -531,24 +576,32 @@ python manage.py test chats
 python manage.py test core.test_seed_initial_data
 ```
 
+### Run Phase 6 assistant tests
+
+```powershell
+python manage.py test chats.Phase6AssistantSelectionTests
+```
+
 ---
 
-## Phase 5 Checklist
+## Phase 6 Checklist
 
 Before moving to the next phase, the following items must be completed:
 
-- [ ] `core/management/commands/seed_initial_data.py` is created
-- [ ] default AI models are seeded
-- [ ] default public assistants are seeded
-- [ ] default subscription plans are seeded
-- [ ] seed command is idempotent
-- [ ] `AIModelSerializer` includes `is_available_for_current_user`
-- [ ] seed command tests are added
+- [ ] `AssistantSerializer` includes `is_available_for_current_user`
+- [ ] `AssistantSerializer` includes `can_modify_current_user`
+- [ ] `GET /api/assistants/public/` works
+- [ ] `GET /api/assistants/mine/` works
+- [ ] `PATCH /api/conversations/<id>/assistant/` works
+- [ ] users can select public assistants
+- [ ] users can select their own private assistants
+- [ ] users cannot select another user's private assistant
+- [ ] users can clear assistant from their own conversation
+- [ ] users cannot change assistant of another user's conversation
+- [ ] Swagger shows new endpoints
 - [ ] `python manage.py check` runs successfully
-- [ ] `python manage.py test core.test_seed_initial_data` runs successfully
-- [ ] `python manage.py seed_initial_data` runs successfully
-- [ ] Swagger still works correctly
-- [ ] Phase 5 is committed and pushed to git
+- [ ] `python manage.py test chats.Phase6AssistantSelectionTests` runs successfully
+- [ ] Phase 6 is committed and pushed to git
 
 ---
 
@@ -557,7 +610,7 @@ Before moving to the next phase, the following items must be completed:
 The next phase is:
 
 ```text
-Phase 6 - Custom Assistants and Assistant Selection Improvements
+Phase 7 - Conversation Messages and Mock AI Responses
 ```
 
-In Phase 6, assistant-related APIs and validations will be improved further, and assistant selection behavior in conversations will be made more complete.
+In Phase 7, message sending, conversation history, and mock AI responses will be implemented.

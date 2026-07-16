@@ -1,9 +1,16 @@
 from django.db.models import Count
-from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema, extend_schema_view
-from rest_framework import viewsets
+from drf_spectacular.utils import (
+    OpenApiExample,
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_view,
+)
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from core.mixins import (
     OwnerCreateMixin,
@@ -22,6 +29,7 @@ from .models import AIModel, Assistant, Conversation, Project
 from .serializers import (
     AIModelSerializer,
     AssistantSerializer,
+    ConversationAssistantUpdateSerializer,
     ConversationSerializer,
     ProjectSerializer,
 )
@@ -36,7 +44,10 @@ from .serializers import (
     retrieve=extend_schema(
         tags=['Projects'],
         summary='Retrieve a project owned by current user',
-        responses={200: ProjectSerializer, 404: OpenApiResponse(description='Project not found.')},
+        responses={
+            200: ProjectSerializer,
+            404: OpenApiResponse(description='Project not found.'),
+        },
     ),
     create=extend_schema(
         tags=['Projects'],
@@ -53,6 +64,12 @@ from .serializers import (
                 request_only=True,
             )
         ],
+    ),
+    update=extend_schema(
+        tags=['Projects'],
+        summary='Fully update a project',
+        request=ProjectSerializer,
+        responses={200: ProjectSerializer},
     ),
     partial_update=extend_schema(
         tags=['Projects'],
@@ -104,8 +121,7 @@ class ProjectViewSet(UserOwnedQuerySetMixin, OwnerCreateMixin, viewsets.ModelVie
         description=(
             'Returns active AI models. The field '
             '`is_available_for_current_user` shows whether the authenticated '
-            'user can select each model. For example, premium models return '
-            '`false` for free users.'
+            'user can select each model. Premium models return false for free users.'
         ),
         responses={200: AIModelSerializer(many=True)},
         examples=[
@@ -148,13 +164,19 @@ class ProjectViewSet(UserOwnedQuerySetMixin, OwnerCreateMixin, viewsets.ModelVie
     retrieve=extend_schema(
         tags=['AI Models'],
         summary='Retrieve an AI model',
-        responses={200: AIModelSerializer, 404: OpenApiResponse(description='AI model not found.')},
+        responses={
+            200: AIModelSerializer,
+            404: OpenApiResponse(description='AI model not found.'),
+        },
     ),
     create=extend_schema(
         tags=['AI Models'],
         summary='Create a new AI model - admin only',
         request=AIModelSerializer,
-        responses={201: AIModelSerializer, 403: OpenApiResponse(description='Only admins can create models.')},
+        responses={
+            201: AIModelSerializer,
+            403: OpenApiResponse(description='Only admins can create models.'),
+        },
         examples=[
             OpenApiExample(
                 name='Create AI Model Request',
@@ -168,6 +190,12 @@ class ProjectViewSet(UserOwnedQuerySetMixin, OwnerCreateMixin, viewsets.ModelVie
                 request_only=True,
             )
         ],
+    ),
+    update=extend_schema(
+        tags=['AI Models'],
+        summary='Fully update an AI model - admin only',
+        request=AIModelSerializer,
+        responses={200: AIModelSerializer},
     ),
     partial_update=extend_schema(
         tags=['AI Models'],
@@ -212,7 +240,10 @@ class AIModelViewSet(viewsets.ModelViewSet):
     retrieve=extend_schema(
         tags=['Assistants'],
         summary='Retrieve an available assistant',
-        responses={200: AssistantSerializer, 404: OpenApiResponse(description='Assistant not found.')},
+        responses={
+            200: AssistantSerializer,
+            404: OpenApiResponse(description='Assistant not found.'),
+        },
     ),
     create=extend_schema(
         tags=['Assistants'],
@@ -231,6 +262,12 @@ class AIModelViewSet(viewsets.ModelViewSet):
                 request_only=True,
             )
         ],
+    ),
+    update=extend_schema(
+        tags=['Assistants'],
+        summary='Fully update an assistant',
+        request=AssistantSerializer,
+        responses={200: AssistantSerializer},
     ),
     partial_update=extend_schema(
         tags=['Assistants'],
@@ -284,6 +321,58 @@ class AssistantViewSet(PublicOrOwnerAssistantQuerySetMixin, viewsets.ModelViewSe
 
         serializer.save(owner=self.request.user)
 
+    @extend_schema(
+        tags=['Assistants'],
+        summary='List public assistants only',
+        responses={200: AssistantSerializer(many=True)},
+    )
+    @action(detail=False, methods=['get'], url_path='public')
+    def public(self, request):
+        """
+        List only public assistants.
+        """
+        queryset = (
+            Assistant.objects
+            .filter(is_public=True)
+            .select_related('owner')
+            .order_by('-created_at')
+        )
+
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        tags=['Assistants'],
+        summary='List current user private assistants only',
+        responses={200: AssistantSerializer(many=True)},
+    )
+    @action(detail=False, methods=['get'], url_path='mine')
+    def mine(self, request):
+        """
+        List only private assistants owned by the current user.
+        """
+        queryset = (
+            Assistant.objects
+            .filter(owner=request.user, is_public=False)
+            .select_related('owner')
+            .order_by('-created_at')
+        )
+
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 @extend_schema_view(
     list=extend_schema(
@@ -294,7 +383,10 @@ class AssistantViewSet(PublicOrOwnerAssistantQuerySetMixin, viewsets.ModelViewSe
     retrieve=extend_schema(
         tags=['Conversations'],
         summary='Retrieve a conversation owned by current user',
-        responses={200: ConversationSerializer, 404: OpenApiResponse(description='Conversation not found.')},
+        responses={
+            200: ConversationSerializer,
+            404: OpenApiResponse(description='Conversation not found.'),
+        },
     ),
     create=extend_schema(
         tags=['Conversations'],
@@ -313,6 +405,12 @@ class AssistantViewSet(PublicOrOwnerAssistantQuerySetMixin, viewsets.ModelViewSe
                 request_only=True,
             )
         ],
+    ),
+    update=extend_schema(
+        tags=['Conversations'],
+        summary='Fully update a conversation',
+        request=ConversationSerializer,
+        responses={200: ConversationSerializer},
     ),
     partial_update=extend_schema(
         tags=['Conversations'],
@@ -370,6 +468,55 @@ class ConversationViewSet(
         if not conversation.title:
             conversation.title = f'Conversation #{conversation.id}'
             conversation.save(update_fields=['title', 'updated_at'])
+
+    @extend_schema(
+        tags=['Conversations'],
+        summary='Select, change, or clear assistant for a conversation',
+        request=ConversationAssistantUpdateSerializer,
+        responses={
+            200: ConversationSerializer,
+            400: OpenApiResponse(description='Selected assistant is not available.'),
+            404: OpenApiResponse(description='Conversation not found.'),
+        },
+        examples=[
+            OpenApiExample(
+                name='Select Assistant Request',
+                value={
+                    'assistant': 1,
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                name='Clear Assistant Request',
+                value={
+                    'assistant': None,
+                },
+                request_only=True,
+            ),
+        ],
+    )
+    @action(detail=True, methods=['patch'], url_path='assistant')
+    def assistant(self, request, pk=None):
+        """
+        Select, change, or clear assistant for a conversation.
+        """
+        conversation = self.get_object()
+
+        serializer = ConversationAssistantUpdateSerializer(
+            data=request.data,
+            context={'request': request},
+        )
+        serializer.is_valid(raise_exception=True)
+
+        conversation.assistant = serializer.validated_data['assistant']
+        conversation.save(update_fields=['assistant', 'updated_at'])
+
+        response_serializer = ConversationSerializer(
+            conversation,
+            context={'request': request},
+        )
+
+        return Response(response_serializer.data, status=status.HTTP_200_OK)
 
 
 @extend_schema(

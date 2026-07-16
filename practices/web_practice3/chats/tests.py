@@ -297,3 +297,227 @@ class Phase4CrudApiTests(TestCase):
         conversation_ids = [item['id'] for item in results]
 
         self.assertIn(self.conversation1.id, conversation_ids)
+
+
+class Phase6AssistantSelectionTests(TestCase):
+    """
+    Tests for Phase 6 assistant improvements and assistant selection behavior.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+
+        self.user1 = User.objects.create_user(
+            username='phase6_user1',
+            email='phase6_user1@example.com',
+            password='StrongPass123!',
+        )
+
+        self.user2 = User.objects.create_user(
+            username='phase6_user2',
+            email='phase6_user2@example.com',
+            password='StrongPass123!',
+        )
+
+        self.admin = User.objects.create_superuser(
+            username='phase6_admin',
+            email='phase6_admin@example.com',
+            password='StrongPass123!',
+        )
+
+        self.free_model = AIModel.objects.create(
+            name='GPT-3.5',
+            provider='OpenAI',
+            description='Free model',
+            is_active=True,
+            is_premium=False,
+        )
+
+        self.project1 = Project.objects.create(
+            owner=self.user1,
+            title='Phase 6 Project 1',
+            description='Project for user1',
+        )
+
+        self.project2 = Project.objects.create(
+            owner=self.user2,
+            title='Phase 6 Project 2',
+            description='Project for user2',
+        )
+
+        self.public_assistant = Assistant.objects.create(
+            owner=None,
+            title='Phase 6 Public Assistant',
+            description='Public assistant',
+            system_prompt='You are public.',
+            is_public=True,
+        )
+
+        self.user1_assistant = Assistant.objects.create(
+            owner=self.user1,
+            title='Phase 6 User 1 Assistant',
+            description='Private assistant for user1',
+            system_prompt='You help user1.',
+            is_public=False,
+        )
+
+        self.user2_assistant = Assistant.objects.create(
+            owner=self.user2,
+            title='Phase 6 User 2 Assistant',
+            description='Private assistant for user2',
+            system_prompt='You help user2.',
+            is_public=False,
+        )
+
+        self.conversation1 = Conversation.objects.create(
+            owner=self.user1,
+            project=self.project1,
+            ai_model=self.free_model,
+            assistant=None,
+            title='Phase 6 Conversation 1',
+        )
+
+        self.conversation2 = Conversation.objects.create(
+            owner=self.user2,
+            project=self.project2,
+            ai_model=self.free_model,
+            assistant=self.user2_assistant,
+            title='Phase 6 Conversation 2',
+        )
+
+    def get_results(self, response):
+        if isinstance(response.data, dict) and 'results' in response.data:
+            return response.data['results']
+
+        return response.data
+
+    def test_assistant_list_includes_availability_and_modify_flags(self):
+        self.client.force_authenticate(user=self.user1)
+
+        response = self.client.get('/api/assistants/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        results = self.get_results(response)
+        item = next(
+            assistant
+            for assistant in results
+            if assistant['id'] == self.user1_assistant.id
+        )
+
+        self.assertIn('is_available_for_current_user', item)
+        self.assertIn('can_modify_current_user', item)
+        self.assertTrue(item['is_available_for_current_user'])
+        self.assertTrue(item['can_modify_current_user'])
+
+    def test_public_assistants_endpoint_returns_only_public_assistants(self):
+        self.client.force_authenticate(user=self.user1)
+
+        response = self.client.get('/api/assistants/public/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        results = self.get_results(response)
+        assistant_ids = [item['id'] for item in results]
+
+        self.assertIn(self.public_assistant.id, assistant_ids)
+        self.assertNotIn(self.user1_assistant.id, assistant_ids)
+        self.assertNotIn(self.user2_assistant.id, assistant_ids)
+
+    def test_mine_assistants_endpoint_returns_only_current_user_private_assistants(self):
+        self.client.force_authenticate(user=self.user1)
+
+        response = self.client.get('/api/assistants/mine/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        results = self.get_results(response)
+        assistant_ids = [item['id'] for item in results]
+
+        self.assertIn(self.user1_assistant.id, assistant_ids)
+        self.assertNotIn(self.public_assistant.id, assistant_ids)
+        self.assertNotIn(self.user2_assistant.id, assistant_ids)
+
+    def test_select_public_assistant_for_conversation_succeeds(self):
+        self.client.force_authenticate(user=self.user1)
+
+        response = self.client.patch(
+            f'/api/conversations/{self.conversation1.id}/assistant/',
+            {
+                'assistant': self.public_assistant.id,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.conversation1.refresh_from_db()
+
+        self.assertEqual(self.conversation1.assistant, self.public_assistant)
+
+    def test_select_own_private_assistant_for_conversation_succeeds(self):
+        self.client.force_authenticate(user=self.user1)
+
+        response = self.client.patch(
+            f'/api/conversations/{self.conversation1.id}/assistant/',
+            {
+                'assistant': self.user1_assistant.id,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.conversation1.refresh_from_db()
+
+        self.assertEqual(self.conversation1.assistant, self.user1_assistant)
+
+    def test_select_other_user_private_assistant_fails(self):
+        self.client.force_authenticate(user=self.user1)
+
+        response = self.client.patch(
+            f'/api/conversations/{self.conversation1.id}/assistant/',
+            {
+                'assistant': self.user2_assistant.id,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.conversation1.refresh_from_db()
+
+        self.assertIsNone(self.conversation1.assistant)
+
+    def test_clear_assistant_from_conversation_succeeds(self):
+        self.conversation1.assistant = self.user1_assistant
+        self.conversation1.save(update_fields=['assistant', 'updated_at'])
+
+        self.client.force_authenticate(user=self.user1)
+
+        response = self.client.patch(
+            f'/api/conversations/{self.conversation1.id}/assistant/',
+            {
+                'assistant': None,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.conversation1.refresh_from_db()
+
+        self.assertIsNone(self.conversation1.assistant)
+
+    def test_user_cannot_change_assistant_of_other_user_conversation(self):
+        self.client.force_authenticate(user=self.user1)
+
+        response = self.client.patch(
+            f'/api/conversations/{self.conversation2.id}/assistant/',
+            {
+                'assistant': self.public_assistant.id,
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
