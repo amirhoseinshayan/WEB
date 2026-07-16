@@ -71,3 +71,47 @@ practices/web_practice2/*.ntvs*
 practices/web_practice2/*.njsproj
 practices/web_practice2/*.sln
 practices/web_practice2/*.sw?
+
+
+# =========================
+# Web Practice 3 - ChatGPT Backend (Django/DRF)
+# =========================
+
+# Virtual environments
+practices/web_practice3/.venv/
+practices/web_practice3/venv/
+practices/web_practice3/env/
+
+# Python cache files
+practices/web_practice3/__pycache__/
+practices/web_practice3/**/__pycache__/
+practices/web_practice3/*.py[cod]
+practices/web_practice3/**/*.py[cod]
+practices/web_practice3/*$py.class
+
+# Django local database and generated files
+practices/web_practice3/db.sqlite3
+practices/web_practice3/*.sqlite3
+practices/web_practice3/media/
+practices/web_practice3/staticfiles/
+
+# Local environment files
+practices/web_practice3/.env
+practices/web_practice3/.env.*
+!practices/web_practice3/.env.example
+
+# Test and coverage outputs
+practices/web_practice3/.pytest_cache/
+practices/web_practice3/.coverage
+practices/web_practice3/htmlcov/
+practices/web_practice3/coverage/
+
+# Type checking / linting cache
+practices/web_practice3/.mypy_cache/
+practices/web_practice3/.ruff_cache/
+
+# IDE files
+practices/web_practice3/.idea/
+
+# Local settings
+practices/web_practice3/config/local_settings.py
