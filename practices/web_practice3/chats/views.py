@@ -10,8 +10,7 @@ from drf_spectacular.utils import (
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.generics import ListCreateAPIView
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, ListCreateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -28,6 +27,7 @@ from core.permissions import (
     IsOwner,
     IsPublicAssistantReadOnlyOrOwner,
 )
+from subscriptions.services import enforce_daily_message_limit
 
 from .models import AIModel, Assistant, Conversation, Message, Project
 from .serializers import (
@@ -85,15 +85,6 @@ from .services import generate_mock_ai_response
         summary='Partially update a project',
         request=ProjectSerializer,
         responses={200: ProjectSerializer},
-        examples=[
-            OpenApiExample(
-                name='Update Project Request',
-                value={
-                    'title': 'Updated University Project',
-                },
-                request_only=True,
-            )
-        ],
     ),
     destroy=extend_schema(
         tags=['Projects'],
@@ -520,11 +511,16 @@ class MessageViewSet(viewsets.ModelViewSet):
     post=extend_schema(
         tags=['Messages'],
         summary='Send a message and receive a mock AI response',
+        description=(
+            'Free users are limited by their daily message quota. '
+            'Premium users have unlimited daily messages.'
+        ),
         request=MessageCreateSerializer,
         responses={
             201: SendMessageResponseSerializer,
             400: OpenApiResponse(description='Invalid message or inactive conversation.'),
             404: OpenApiResponse(description='Conversation not found.'),
+            429: OpenApiResponse(description='Daily message limit exceeded.'),
         },
         examples=[
             OpenApiExample(
@@ -588,6 +584,13 @@ class ConversationMessagesAPIView(ListCreateAPIView):
 
         if conversation.status != Conversation.Status.ACTIVE:
             raise ValidationError('Messages can only be sent to active conversations.')
+
+        if not conversation.ai_model.is_available_to(request.user):
+            raise ValidationError({
+                'ai_model': 'The selected AI model is not available for your current subscription.'
+            })
+
+        enforce_daily_message_limit(request.user)
 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)

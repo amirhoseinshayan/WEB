@@ -111,6 +111,20 @@ Implemented:
 - Message soft delete API
 - Message access isolation tests
 
+### Phase 8 - Subscription System and Free User Limits
+
+Implemented:
+
+- Subscription status endpoint
+- Subscription plans endpoint
+- Simulated subscription purchase endpoint
+- Free and Premium subscription behavior
+- Daily message limit for Free users
+- Unlimited messages for Premium users
+- Premium model restriction for Free users
+- Premium model access for Premium users
+- Subscription tests
+
 ---
 
 ## Setup on Windows
@@ -185,6 +199,68 @@ Authorization: Bearer <access_token>
 
 ---
 
+## Subscription APIs
+
+### Get Subscription Status
+
+```http
+GET /api/subscription/status/
+```
+
+Example response for Free user:
+
+```json
+{
+  "subscription_type": "free",
+  "plan_name": "Free Plan",
+  "is_premium": false,
+  "premium_until": null,
+  "daily_message_limit": 50,
+  "daily_messages_used": 0,
+  "daily_messages_remaining": 50,
+  "can_use_premium_models": false,
+  "can_upload_files": false
+}
+```
+
+Example response for Premium user:
+
+```json
+{
+  "subscription_type": "premium",
+  "plan_name": "Premium Monthly",
+  "is_premium": true,
+  "premium_until": "2026-08-16T10:00:00Z",
+  "daily_message_limit": null,
+  "daily_messages_used": 12,
+  "daily_messages_remaining": null,
+  "can_use_premium_models": true,
+  "can_upload_files": true
+}
+```
+
+### List Subscription Plans
+
+```http
+GET /api/subscription/plans/
+```
+
+### Purchase or Switch Plan
+
+```http
+POST /api/subscription/purchase/
+```
+
+Request:
+
+```json
+{
+  "plan_id": 2
+}
+```
+
+---
+
 ## Main CRUD APIs
 
 ### Projects
@@ -206,6 +282,10 @@ GET     /api/models/<id>/
 PATCH   /api/models/<id>/     admin only
 DELETE  /api/models/<id>/     admin only
 ```
+
+Free users can only use non-premium models.
+
+Premium users can use both free and premium models.
 
 ### Assistants
 
@@ -245,23 +325,9 @@ Send message request:
 }
 ```
 
-Send message response:
+Free users have a daily message limit.
 
-```json
-{
-  "message": "Message sent successfully.",
-  "user_message": {
-    "id": 1,
-    "role": "user",
-    "content": "Hello, explain Django REST Framework shortly."
-  },
-  "assistant_message": {
-    "id": 2,
-    "role": "assistant",
-    "content": "[Mock response from OpenAI GPT-3.5] ..."
-  }
-}
-```
+Premium users have unlimited daily messages.
 
 ### Messages
 
@@ -270,14 +336,6 @@ GET     /api/messages/
 GET     /api/messages/<message_id>/
 PATCH   /api/messages/<message_id>/
 DELETE  /api/messages/<message_id>/
-```
-
-Edit user message:
-
-```json
-{
-  "content": "Edited message text"
-}
 ```
 
 ---
@@ -327,10 +385,10 @@ python manage.py makemigrations --check --dry-run
 python manage.py test
 ```
 
-### Run Phase 7 tests
+### Run Phase 8 tests
 
 ```powershell
-python manage.py test chats.test_messages
+python manage.py test subscriptions
 ```
 
 ### Run chats tests
@@ -341,30 +399,27 @@ python manage.py test chats
 
 ---
 
-## Phase 7 Checklist
+## Phase 8 Checklist
 
-- [ ] `chats/services.py` is created
-- [ ] `MessageSerializer` is added
-- [ ] `MessageCreateSerializer` is added
-- [ ] `MessageUpdateSerializer` is added
-- [ ] `SendMessageResponseSerializer` is added
-- [ ] `GET /api/conversations/<conversation_id>/messages/` works
-- [ ] `POST /api/conversations/<conversation_id>/messages/` works
-- [ ] user message is saved
-- [ ] mock assistant response is saved
-- [ ] `GET /api/messages/` works
-- [ ] `GET /api/messages/<id>/` works
-- [ ] `PATCH /api/messages/<id>/` works for user messages
-- [ ] assistant messages cannot be edited
-- [ ] `DELETE /api/messages/<id>/` performs soft delete
-- [ ] users cannot access messages from other users' conversations
-- [ ] Swagger shows message endpoints
-- [ ] `python manage.py test chats.test_messages` passes
+- [ ] `subscriptions/services.py` is created
+- [ ] `subscriptions/serializers.py` is created
+- [ ] `subscriptions/views.py` is implemented
+- [ ] `subscriptions/urls.py` is created
+- [ ] `config/urls.py` includes subscription routes
+- [ ] `GET /api/subscription/status/` works
+- [ ] `GET /api/subscription/plans/` works
+- [ ] `POST /api/subscription/purchase/` works
+- [ ] Free users have daily message limits
+- [ ] Premium users have unlimited messages
+- [ ] Free users cannot use premium models
+- [ ] Premium users can use premium models
+- [ ] Swagger shows Subscription endpoints
+- [ ] `python manage.py test subscriptions` passes
 
 ---
 
 ## Next Phase
 
 ```text
-Phase 8 - Subscription System and Free User Limits
+Phase 9 - Linked Accounts and Account Switching
 ```
