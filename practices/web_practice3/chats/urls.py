@@ -4,8 +4,10 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     AIModelViewSet,
     AssistantViewSet,
+    AttachmentViewSet,
     ConversationMessagesAPIView,
     ConversationViewSet,
+    MessageAttachmentsAPIView,
     MessageViewSet,
     ProjectConversationsAPIView,
     ProjectViewSet,
@@ -21,6 +23,7 @@ router.register(r'models', AIModelViewSet, basename='ai-model')
 router.register(r'assistants', AssistantViewSet, basename='assistant')
 router.register(r'conversations', ConversationViewSet, basename='conversation')
 router.register(r'messages', MessageViewSet, basename='message')
+router.register(r'attachments', AttachmentViewSet, basename='attachment')
 
 
 urlpatterns = [
@@ -34,5 +37,10 @@ urlpatterns = [
         'conversations/<int:conversation_id>/messages/',
         ConversationMessagesAPIView.as_view(),
         name='conversation-messages',
+    ),
+    path(
+        'messages/<int:message_id>/attachments/',
+        MessageAttachmentsAPIView.as_view(),
+        name='message-attachments',
     ),
 ]

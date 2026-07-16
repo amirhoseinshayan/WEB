@@ -7,7 +7,7 @@ from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
 )
-from rest_framework import status, viewsets
+from rest_framework import parsers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.generics import ListAPIView, ListCreateAPIView
@@ -22,17 +22,20 @@ from core.mixins import (
 )
 from core.permissions import (
     IsAdminOrReadOnly,
+    IsAttachmentOwner,
     IsConversationOwner,
     IsMessageOwner,
     IsOwner,
     IsPublicAssistantReadOnlyOrOwner,
 )
-from subscriptions.services import enforce_daily_message_limit
+from subscriptions.services import build_subscription_status, enforce_daily_message_limit
 
-from .models import AIModel, Assistant, Conversation, Message, Project
+from .models import AIModel, Assistant, Attachment, Conversation, Message, Project
 from .serializers import (
     AIModelSerializer,
     AssistantSerializer,
+    AttachmentSerializer,
+    AttachmentUploadSerializer,
     ConversationAssistantUpdateSerializer,
     ConversationSerializer,
     MessageCreateSerializer,
@@ -642,5 +645,171 @@ class ConversationMessagesAPIView(ListCreateAPIView):
                     context={'request': request},
                 ).data,
             },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+@extend_schema_view(
+    list=extend_schema(
+        tags=['Attachments'],
+        summary='List current user attachments',
+        responses={200: AttachmentSerializer(many=True)},
+    ),
+    retrieve=extend_schema(
+        tags=['Attachments'],
+        summary='Retrieve an attachment owned by current user',
+        responses={
+            200: AttachmentSerializer,
+            404: OpenApiResponse(description='Attachment not found.'),
+        },
+    ),
+    destroy=extend_schema(
+        tags=['Attachments'],
+        summary='Delete an attachment',
+        responses={
+            204: OpenApiResponse(description='Attachment deleted successfully.'),
+            404: OpenApiResponse(description='Attachment not found.'),
+        },
+    ),
+)
+class AttachmentViewSet(viewsets.ModelViewSet):
+    """
+    API for listing, retrieving, and deleting attachments.
+
+    Attachment upload must be done through:
+    POST /api/messages/<message_id>/attachments/
+    """
+
+    serializer_class = AttachmentSerializer
+    permission_classes = [IsAuthenticated, IsAttachmentOwner]
+    http_method_names = ['get', 'delete', 'head', 'options']
+
+    def get_queryset(self):
+        return (
+            Attachment.objects
+            .select_related(
+                'message',
+                'message__conversation',
+                'message__conversation__owner',
+            )
+            .filter(message__conversation__owner=self.request.user)
+            .order_by('-uploaded_at')
+        )
+
+    def perform_destroy(self, instance):
+        if instance.file:
+            instance.file.delete(save=False)
+
+        instance.delete()
+
+
+@extend_schema_view(
+    get=extend_schema(
+        tags=['Attachments'],
+        summary='List attachments of a specific message',
+        responses={
+            200: AttachmentSerializer(many=True),
+            404: OpenApiResponse(description='Message not found.'),
+        },
+    ),
+    post=extend_schema(
+        tags=['Attachments'],
+        summary='Upload an attachment to a user message - premium only',
+        request=AttachmentUploadSerializer,
+        responses={
+            201: AttachmentSerializer,
+            400: OpenApiResponse(description='Invalid file.'),
+            403: OpenApiResponse(description='File upload is available for Premium users only.'),
+            404: OpenApiResponse(description='Message not found.'),
+        },
+        examples=[
+            OpenApiExample(
+                name='Upload Attachment Request',
+                value={
+                    'file': 'example.pdf',
+                },
+                request_only=True,
+            )
+        ],
+    ),
+)
+class MessageAttachmentsAPIView(ListCreateAPIView):
+    """
+    GET:
+    List attachments for a specific message.
+
+    POST:
+    Upload an attachment to a user message.
+    Only Premium users can upload files.
+    """
+
+    permission_classes = [IsAuthenticated]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
+
+    def get_message(self):
+        if hasattr(self, '_message'):
+            return self._message
+
+        message_id = self.kwargs.get('message_id')
+
+        self._message = get_object_or_404(
+            Message.objects.select_related('conversation', 'conversation__owner'),
+            id=message_id,
+            conversation__owner=self.request.user,
+            is_deleted=False,
+        )
+
+        return self._message
+
+    def get_queryset(self):
+        message = self.get_message()
+
+        return (
+            Attachment.objects
+            .select_related(
+                'message',
+                'message__conversation',
+                'message__conversation__owner',
+            )
+            .filter(message=message)
+            .order_by('-uploaded_at')
+        )
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return AttachmentUploadSerializer
+
+        return AttachmentSerializer
+
+    def create(self, request, *args, **kwargs):
+        message = self.get_message()
+
+        if message.role != Message.Role.USER:
+            raise ValidationError(
+                'Attachments can only be uploaded to user messages.'
+            )
+
+        subscription_status = build_subscription_status(request.user)
+
+        if not subscription_status['can_upload_files']:
+            raise PermissionDenied(
+                'File upload is available for Premium users only.'
+            )
+
+        serializer = self.get_serializer(
+            data=request.data,
+            context={'request': request},
+        )
+        serializer.is_valid(raise_exception=True)
+
+        attachment = serializer.save(message=message)
+
+        response_serializer = AttachmentSerializer(
+            attachment,
+            context={'request': request},
+        )
+
+        return Response(
+            response_serializer.data,
             status=status.HTTP_201_CREATED,
         )

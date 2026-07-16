@@ -2,7 +2,23 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from .models import AIModel, Assistant, Conversation, Message, Project
+from .models import AIModel, Assistant, Attachment, Conversation, Message, Project
+
+
+ALLOWED_ATTACHMENT_EXTENSIONS = {
+    'txt',
+    'pdf',
+    'png',
+    'jpg',
+    'jpeg',
+    'webp',
+    'csv',
+    'md',
+    'json',
+    'docx',
+}
+
+MAX_ATTACHMENT_SIZE_BYTES = 5 * 1024 * 1024
 
 
 class ProjectSerializer(serializers.ModelSerializer):
@@ -418,3 +434,120 @@ class SendMessageResponseSerializer(serializers.Serializer):
     message = serializers.CharField()
     user_message = MessageSerializer()
     assistant_message = MessageSerializer()
+
+
+class AttachmentSerializer(serializers.ModelSerializer):
+    """
+    Serializer for reading message attachments.
+    """
+
+    owner = serializers.IntegerField(source='owner_id', read_only=True)
+    message_role = serializers.CharField(source='message.role', read_only=True)
+    conversation = serializers.IntegerField(source='message.conversation_id', read_only=True)
+    file_name = serializers.CharField(read_only=True)
+    file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Attachment
+        fields = (
+            'id',
+            'owner',
+            'conversation',
+            'message',
+            'message_role',
+            'file',
+            'file_url',
+            'file_name',
+            'file_format',
+            'file_size',
+            'uploaded_at',
+        )
+        read_only_fields = (
+            'id',
+            'owner',
+            'conversation',
+            'message',
+            'message_role',
+            'file',
+            'file_url',
+            'file_name',
+            'file_format',
+            'file_size',
+            'uploaded_at',
+        )
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_file_url(self, obj):
+        request = self.context.get('request')
+
+        if not obj.file:
+            return None
+
+        if request is None:
+            return obj.file.url
+
+        return request.build_absolute_uri(obj.file.url)
+
+
+class AttachmentUploadSerializer(serializers.ModelSerializer):
+    """
+    Serializer for uploading an attachment to a user message.
+    """
+
+    file_name = serializers.CharField(read_only=True)
+    file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Attachment
+        fields = (
+            'id',
+            'file',
+            'file_url',
+            'file_name',
+            'file_format',
+            'file_size',
+            'uploaded_at',
+        )
+        read_only_fields = (
+            'id',
+            'file_url',
+            'file_name',
+            'file_format',
+            'file_size',
+            'uploaded_at',
+        )
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_file_url(self, obj):
+        request = self.context.get('request')
+
+        if not obj.file:
+            return None
+
+        if request is None:
+            return obj.file.url
+
+        return request.build_absolute_uri(obj.file.url)
+
+    def validate_file(self, uploaded_file):
+        if uploaded_file.size > MAX_ATTACHMENT_SIZE_BYTES:
+            raise serializers.ValidationError(
+                'File size must not exceed 5 MB.'
+            )
+
+        file_name = uploaded_file.name
+
+        if '.' not in file_name:
+            raise serializers.ValidationError(
+                'File must have a valid extension.'
+            )
+
+        extension = file_name.rsplit('.', 1)[-1].lower()
+
+        if extension not in ALLOWED_ATTACHMENT_EXTENSIONS:
+            allowed = ', '.join(sorted(ALLOWED_ATTACHMENT_EXTENSIONS))
+            raise serializers.ValidationError(
+                f'Unsupported file format. Allowed formats: {allowed}.'
+            )
+
+        return uploaded_file

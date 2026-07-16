@@ -135,10 +135,21 @@ Implemented:
 - Linked account delete endpoint
 - Account switching endpoint
 - JWT token generation for switched account
-- Validation against self-linking
-- Validation against duplicate links
-- Validation against switching to unlinked accounts
 - Linked account tests
+
+### Phase 10 - File Attachments for Messages
+
+Implemented:
+
+- Attachment upload endpoint for user messages
+- Attachment list endpoint for a specific message
+- Global attachment list endpoint for current user
+- Attachment retrieve endpoint
+- Attachment delete endpoint
+- Premium-only file upload permission
+- File extension validation
+- File size validation
+- Attachment access isolation tests
 
 ---
 
@@ -217,76 +228,12 @@ Authorization: Bearer <access_token>
 
 ## Linked Account APIs
 
-### List linked accounts
-
 ```http
-GET /api/linked-accounts/
-```
-
-### Link another account
-
-```http
-POST /api/linked-accounts/
-```
-
-Request:
-
-```json
-{
-  "identifier": "second_user@example.com"
-}
-```
-
-The identifier can be either username or email.
-
-### Retrieve linked account
-
-```http
-GET /api/linked-accounts/<id>/
-```
-
-### Delete linked account
-
-```http
+GET    /api/linked-accounts/
+POST   /api/linked-accounts/
+GET    /api/linked-accounts/<id>/
 DELETE /api/linked-accounts/<id>/
-```
-
-### Switch account
-
-```http
-POST /api/auth/switch-account/
-```
-
-Request:
-
-```json
-{
-  "linked_user_id": 2
-}
-```
-
-Response:
-
-```json
-{
-  "message": "Switched account successfully.",
-  "access": "new-access-token-for-linked-user",
-  "refresh": "new-refresh-token-for-linked-user",
-  "switched_from": {
-    "id": 1,
-    "username": "main_user"
-  },
-  "switched_to": {
-    "id": 2,
-    "username": "linked_user"
-  }
-}
-```
-
-After switching, use the new access token as:
-
-```text
-Authorization: Bearer <new_access_token>
+POST   /api/auth/switch-account/
 ```
 
 ---
@@ -372,6 +319,67 @@ DELETE  /api/messages/<message_id>/
 
 ---
 
+## Attachment APIs
+
+### List attachments of a message
+
+```http
+GET /api/messages/<message_id>/attachments/
+```
+
+### Upload attachment to a user message
+
+```http
+POST /api/messages/<message_id>/attachments/
+```
+
+This endpoint requires `multipart/form-data`.
+
+Request field:
+
+```text
+file
+```
+
+Example allowed formats:
+
+```text
+txt, pdf, png, jpg, jpeg, webp, csv, md, json, docx
+```
+
+Maximum file size:
+
+```text
+5 MB
+```
+
+Rules:
+
+- Only Premium users can upload files.
+- Files can only be attached to user messages.
+- Users can only upload files to messages inside their own conversations.
+- Files cannot be attached to deleted messages.
+
+### List current user's attachments
+
+```http
+GET /api/attachments/
+```
+
+### Retrieve attachment
+
+```http
+GET /api/attachments/<id>/
+```
+
+### Delete attachment
+
+```http
+DELETE /api/attachments/<id>/
+```
+
+---
+
 ## Initial Data Seeding
 
 ```powershell
@@ -417,10 +425,10 @@ python manage.py makemigrations --check --dry-run
 python manage.py test
 ```
 
-### Run Phase 9 tests
+### Run Phase 10 tests
 
 ```powershell
-python manage.py test accounts
+python manage.py test chats.test_attachments
 ```
 
 ### Run important app tests
@@ -431,27 +439,29 @@ python manage.py test accounts chats subscriptions
 
 ---
 
-## Phase 9 Checklist
+## Phase 10 Checklist
 
-- [ ] `LinkedAccountSerializer` is added
-- [ ] `LinkedAccountCreateSerializer` is added
-- [ ] `SwitchAccountSerializer` is added
-- [ ] `GET /api/linked-accounts/` works
-- [ ] `POST /api/linked-accounts/` works
-- [ ] `GET /api/linked-accounts/<id>/` works
-- [ ] `DELETE /api/linked-accounts/<id>/` works
-- [ ] `POST /api/auth/switch-account/` works
-- [ ] self-linking is rejected
-- [ ] duplicate links are rejected
-- [ ] switching to unlinked account is rejected
-- [ ] switched token belongs to linked user
-- [ ] Swagger shows Linked Accounts endpoints
-- [ ] `python manage.py test accounts` passes
+- [ ] `AttachmentSerializer` is added
+- [ ] `AttachmentUploadSerializer` is added
+- [ ] `AttachmentViewSet` is added
+- [ ] `MessageAttachmentsAPIView` is added
+- [ ] `GET /api/messages/<message_id>/attachments/` works
+- [ ] `POST /api/messages/<message_id>/attachments/` works
+- [ ] `GET /api/attachments/` works
+- [ ] `GET /api/attachments/<id>/` works
+- [ ] `DELETE /api/attachments/<id>/` works
+- [ ] Free users cannot upload attachments
+- [ ] Premium users can upload attachments
+- [ ] unsupported file formats are rejected
+- [ ] oversized files are rejected
+- [ ] users cannot access other users' attachments
+- [ ] Swagger shows Attachment endpoints
+- [ ] `python manage.py test chats.test_attachments` passes
 
 ---
 
 ## Next Phase
 
 ```text
-Phase 10 - File Attachments for Messages
+Phase 11 - Final Tests, Cleanup, and Delivery Preparation
 ```
