@@ -125,6 +125,21 @@ Implemented:
 - Premium model access for Premium users
 - Subscription tests
 
+### Phase 9 - Linked Accounts and Account Switching
+
+Implemented:
+
+- Linked account list endpoint
+- Linked account creation endpoint
+- Linked account retrieve endpoint
+- Linked account delete endpoint
+- Account switching endpoint
+- JWT token generation for switched account
+- Validation against self-linking
+- Validation against duplicate links
+- Validation against switching to unlinked accounts
+- Linked account tests
+
 ---
 
 ## Setup on Windows
@@ -189,6 +204,7 @@ POST  /api/auth/login/
 POST  /api/auth/token/refresh/
 GET   /api/auth/profile/
 PATCH /api/auth/profile/
+POST  /api/auth/switch-account/
 ```
 
 Protected endpoints require:
@@ -199,64 +215,88 @@ Authorization: Bearer <access_token>
 
 ---
 
-## Subscription APIs
+## Linked Account APIs
 
-### Get Subscription Status
-
-```http
-GET /api/subscription/status/
-```
-
-Example response for Free user:
-
-```json
-{
-  "subscription_type": "free",
-  "plan_name": "Free Plan",
-  "is_premium": false,
-  "premium_until": null,
-  "daily_message_limit": 50,
-  "daily_messages_used": 0,
-  "daily_messages_remaining": 50,
-  "can_use_premium_models": false,
-  "can_upload_files": false
-}
-```
-
-Example response for Premium user:
-
-```json
-{
-  "subscription_type": "premium",
-  "plan_name": "Premium Monthly",
-  "is_premium": true,
-  "premium_until": "2026-08-16T10:00:00Z",
-  "daily_message_limit": null,
-  "daily_messages_used": 12,
-  "daily_messages_remaining": null,
-  "can_use_premium_models": true,
-  "can_upload_files": true
-}
-```
-
-### List Subscription Plans
+### List linked accounts
 
 ```http
-GET /api/subscription/plans/
+GET /api/linked-accounts/
 ```
 
-### Purchase or Switch Plan
+### Link another account
 
 ```http
-POST /api/subscription/purchase/
+POST /api/linked-accounts/
 ```
 
 Request:
 
 ```json
 {
-  "plan_id": 2
+  "identifier": "second_user@example.com"
 }
+```
+
+The identifier can be either username or email.
+
+### Retrieve linked account
+
+```http
+GET /api/linked-accounts/<id>/
+```
+
+### Delete linked account
+
+```http
+DELETE /api/linked-accounts/<id>/
+```
+
+### Switch account
+
+```http
+POST /api/auth/switch-account/
+```
+
+Request:
+
+```json
+{
+  "linked_user_id": 2
+}
+```
+
+Response:
+
+```json
+{
+  "message": "Switched account successfully.",
+  "access": "new-access-token-for-linked-user",
+  "refresh": "new-refresh-token-for-linked-user",
+  "switched_from": {
+    "id": 1,
+    "username": "main_user"
+  },
+  "switched_to": {
+    "id": 2,
+    "username": "linked_user"
+  }
+}
+```
+
+After switching, use the new access token as:
+
+```text
+Authorization: Bearer <new_access_token>
+```
+
+---
+
+## Subscription APIs
+
+```http
+GET  /api/subscription/status/
+GET  /api/subscription/plans/
+POST /api/subscription/purchase/
 ```
 
 ---
@@ -315,14 +355,6 @@ PATCH   /api/conversations/<id>/assistant/
 ```http
 GET  /api/conversations/<conversation_id>/messages/
 POST /api/conversations/<conversation_id>/messages/
-```
-
-Send message request:
-
-```json
-{
-  "content": "Hello, explain Django REST Framework shortly."
-}
 ```
 
 Free users have a daily message limit.
@@ -385,41 +417,41 @@ python manage.py makemigrations --check --dry-run
 python manage.py test
 ```
 
-### Run Phase 8 tests
+### Run Phase 9 tests
 
 ```powershell
-python manage.py test subscriptions
+python manage.py test accounts
 ```
 
-### Run chats tests
+### Run important app tests
 
 ```powershell
-python manage.py test chats
+python manage.py test accounts chats subscriptions
 ```
 
 ---
 
-## Phase 8 Checklist
+## Phase 9 Checklist
 
-- [ ] `subscriptions/services.py` is created
-- [ ] `subscriptions/serializers.py` is created
-- [ ] `subscriptions/views.py` is implemented
-- [ ] `subscriptions/urls.py` is created
-- [ ] `config/urls.py` includes subscription routes
-- [ ] `GET /api/subscription/status/` works
-- [ ] `GET /api/subscription/plans/` works
-- [ ] `POST /api/subscription/purchase/` works
-- [ ] Free users have daily message limits
-- [ ] Premium users have unlimited messages
-- [ ] Free users cannot use premium models
-- [ ] Premium users can use premium models
-- [ ] Swagger shows Subscription endpoints
-- [ ] `python manage.py test subscriptions` passes
+- [ ] `LinkedAccountSerializer` is added
+- [ ] `LinkedAccountCreateSerializer` is added
+- [ ] `SwitchAccountSerializer` is added
+- [ ] `GET /api/linked-accounts/` works
+- [ ] `POST /api/linked-accounts/` works
+- [ ] `GET /api/linked-accounts/<id>/` works
+- [ ] `DELETE /api/linked-accounts/<id>/` works
+- [ ] `POST /api/auth/switch-account/` works
+- [ ] self-linking is rejected
+- [ ] duplicate links are rejected
+- [ ] switching to unlinked account is rejected
+- [ ] switched token belongs to linked user
+- [ ] Swagger shows Linked Accounts endpoints
+- [ ] `python manage.py test accounts` passes
 
 ---
 
 ## Next Phase
 
 ```text
-Phase 9 - Linked Accounts and Account Switching
+Phase 10 - File Attachments for Messages
 ```
