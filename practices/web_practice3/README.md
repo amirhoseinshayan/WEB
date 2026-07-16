@@ -2,7 +2,7 @@
 
 This project is a Django REST Framework backend for a ChatGPT-like application.
 
-The goal of this project is to implement the backend of a simplified ChatGPT-style system using Django, Django REST Framework, JWT authentication, SQLite database, Swagger documentation, and proper RESTful API design.
+The goal of this project is to implement the backend of a simplified ChatGPT-style system using Django, Django REST Framework, JWT authentication, SQLite database, Swagger documentation, proper RESTful API design, tests, and clean project delivery.
 
 ---
 
@@ -151,21 +151,50 @@ Implemented:
 - File size validation
 - Attachment access isolation tests
 
+### Phase 11 - Final Tests, Cleanup, and Delivery Preparation
+
+Implemented:
+
+- Final validation management command
+- Final integration tests
+- Delivery guide
+- Final README cleanup
+- Final test commands
+- Final zip creation command
+- Delivery checklist
+
 ---
 
 ## Setup on Windows
 
+Go to the project directory:
+
 ```powershell
 cd practices\web_practice3
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
 ```
 
-For CMD:
+Create virtual environment:
+
+```powershell
+py -m venv .venv
+```
+
+Activate virtual environment in PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Activate virtual environment in CMD:
 
 ```cmd
 .\.venv\Scripts\activate.bat
+```
+
+Install dependencies:
+
+```powershell
+pip install -r requirements.txt
 ```
 
 ---
@@ -188,6 +217,8 @@ http://127.0.0.1:8000/
 ---
 
 ## Swagger Documentation
+
+Swagger UI:
 
 ```text
 http://127.0.0.1:8000/api/docs/
@@ -246,11 +277,17 @@ GET  /api/subscription/plans/
 POST /api/subscription/purchase/
 ```
 
+Free users have daily message limits.
+
+Premium users have:
+
+- unlimited daily messages
+- premium model access
+- file upload access
+
 ---
 
-## Main CRUD APIs
-
-### Projects
+## Projects
 
 ```http
 GET     /api/projects/
@@ -258,9 +295,12 @@ POST    /api/projects/
 GET     /api/projects/<id>/
 PATCH   /api/projects/<id>/
 DELETE  /api/projects/<id>/
+GET     /api/projects/<project_id>/conversations/
 ```
 
-### AI Models
+---
+
+## AI Models
 
 ```http
 GET     /api/models/
@@ -274,7 +314,9 @@ Free users can only use non-premium models.
 
 Premium users can use both free and premium models.
 
-### Assistants
+---
+
+## Assistants
 
 ```http
 GET     /api/assistants/
@@ -286,7 +328,9 @@ GET     /api/assistants/public/
 GET     /api/assistants/mine/
 ```
 
-### Conversations
+---
+
+## Conversations
 
 ```http
 GET     /api/conversations/
@@ -297,18 +341,44 @@ DELETE  /api/conversations/<id>/
 PATCH   /api/conversations/<id>/assistant/
 ```
 
-### Conversation Messages
+---
+
+## Conversation Messages
 
 ```http
 GET  /api/conversations/<conversation_id>/messages/
 POST /api/conversations/<conversation_id>/messages/
 ```
 
-Free users have a daily message limit.
+Send message request:
 
-Premium users have unlimited daily messages.
+```json
+{
+  "content": "Hello, explain Django REST Framework shortly."
+}
+```
 
-### Messages
+Send message response:
+
+```json
+{
+  "message": "Message sent successfully.",
+  "user_message": {
+    "id": 1,
+    "role": "user",
+    "content": "Hello, explain Django REST Framework shortly."
+  },
+  "assistant_message": {
+    "id": 2,
+    "role": "assistant",
+    "content": "[Mock response from OpenAI GPT-3.5] ..."
+  }
+}
+```
+
+---
+
+## Messages
 
 ```http
 GET     /api/messages/
@@ -316,6 +386,10 @@ GET     /api/messages/<message_id>/
 PATCH   /api/messages/<message_id>/
 DELETE  /api/messages/<message_id>/
 ```
+
+Only user messages can be edited.
+
+Deleted messages are soft-deleted.
 
 ---
 
@@ -341,7 +415,7 @@ Request field:
 file
 ```
 
-Example allowed formats:
+Allowed formats:
 
 ```text
 txt, pdf, png, jpg, jpeg, webp, csv, md, json, docx
@@ -405,6 +479,24 @@ Premium Yearly
 
 ---
 
+## Final Validation
+
+Run:
+
+```powershell
+python manage.py validate_project
+```
+
+This command checks:
+
+- Django system check
+- pending migrations
+- required installed apps
+- important settings
+- required API routes
+
+---
+
 ## Useful Commands
 
 ### Check project
@@ -419,49 +511,90 @@ python manage.py check
 python manage.py makemigrations --check --dry-run
 ```
 
+### Run migrations
+
+```powershell
+python manage.py migrate
+```
+
+### Seed initial data
+
+```powershell
+python manage.py seed_initial_data
+```
+
+### Run server
+
+```powershell
+python manage.py runserver
+```
+
 ### Run all tests
 
 ```powershell
 python manage.py test
 ```
 
-### Run Phase 10 tests
+### Run final integration tests
 
 ```powershell
-python manage.py test chats.test_attachments
+python manage.py test core.test_final_project
 ```
 
 ### Run important app tests
 
 ```powershell
-python manage.py test accounts chats subscriptions
+python manage.py test accounts chats subscriptions core
 ```
 
 ---
 
-## Phase 10 Checklist
+## Final Delivery Checklist
 
-- [ ] `AttachmentSerializer` is added
-- [ ] `AttachmentUploadSerializer` is added
-- [ ] `AttachmentViewSet` is added
-- [ ] `MessageAttachmentsAPIView` is added
-- [ ] `GET /api/messages/<message_id>/attachments/` works
-- [ ] `POST /api/messages/<message_id>/attachments/` works
-- [ ] `GET /api/attachments/` works
-- [ ] `GET /api/attachments/<id>/` works
-- [ ] `DELETE /api/attachments/<id>/` works
-- [ ] Free users cannot upload attachments
-- [ ] Premium users can upload attachments
-- [ ] unsupported file formats are rejected
-- [ ] oversized files are rejected
-- [ ] users cannot access other users' attachments
-- [ ] Swagger shows Attachment endpoints
-- [ ] `python manage.py test chats.test_attachments` passes
+Before delivery:
+
+- [ ] `python manage.py check` passes
+- [ ] `python manage.py makemigrations --check --dry-run` shows no changes
+- [ ] `python manage.py validate_project` passes
+- [ ] `python manage.py test` passes
+- [ ] Swagger opens correctly
+- [ ] `.venv/` is not included
+- [ ] `db.sqlite3` is not included
+- [ ] `media/` is not included
+- [ ] `__pycache__/` is not included
+- [ ] `.env` is not included
+- [ ] `.env.example` is included
+- [ ] `requirements.txt` is included
+- [ ] `README.md` is included
+- [ ] `DELIVERY.md` is included
 
 ---
 
-## Next Phase
+## Create Final Zip
 
-```text
-Phase 11 - Final Tests, Cleanup, and Delivery Preparation
+Run from repository root:
+
+```cmd
+cd C:\Users\SARIR\Desktop\WEB
+git archive --format=zip --prefix=web_practice3/ --output=WP-HW3-402170981.zip HEAD:practices/web_practice3
+```
+
+This creates a clean zip from tracked files only.
+
+It excludes:
+
+- `.venv/`
+- `db.sqlite3`
+- `media/`
+- cache files
+- untracked local files
+
+---
+
+## Final Git Commit
+
+```cmd
+git add practices/web_practice3/core/management/commands/validate_project.py practices/web_practice3/core/test_final_project.py practices/web_practice3/DELIVERY.md practices/web_practice3/README.md
+git commit -m "chore(web-practice3): finalize project delivery"
+git push
 ```
