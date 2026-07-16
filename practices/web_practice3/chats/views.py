@@ -1,10 +1,9 @@
 from django.db.models import Count
 from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema, extend_schema_view
-from rest_framework import status, viewsets
+from rest_framework import viewsets
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 
 from core.mixins import (
     OwnerCreateMixin,
@@ -32,7 +31,7 @@ from .serializers import (
     list=extend_schema(
         tags=['Projects'],
         summary='List current user projects',
-        responses={200: ProjectSerializer},
+        responses={200: ProjectSerializer(many=True)},
     ),
     retrieve=extend_schema(
         tags=['Projects'],
@@ -101,8 +100,50 @@ class ProjectViewSet(UserOwnedQuerySetMixin, OwnerCreateMixin, viewsets.ModelVie
 @extend_schema_view(
     list=extend_schema(
         tags=['AI Models'],
-        summary='List available AI models',
-        responses={200: AIModelSerializer},
+        summary='List active AI models',
+        description=(
+            'Returns active AI models. The field '
+            '`is_available_for_current_user` shows whether the authenticated '
+            'user can select each model. For example, premium models return '
+            '`false` for free users.'
+        ),
+        responses={200: AIModelSerializer(many=True)},
+        examples=[
+            OpenApiExample(
+                name='AI Models List Response',
+                value={
+                    'count': 4,
+                    'next': None,
+                    'previous': None,
+                    'results': [
+                        {
+                            'id': 1,
+                            'name': 'GPT-3.5',
+                            'provider': 'OpenAI',
+                            'description': 'Basic free model for regular users.',
+                            'is_active': True,
+                            'is_premium': False,
+                            'is_available_for_current_user': True,
+                            'created_at': '2026-01-01T10:00:00Z',
+                            'updated_at': '2026-01-01T10:00:00Z',
+                        },
+                        {
+                            'id': 2,
+                            'name': 'GPT-4',
+                            'provider': 'OpenAI',
+                            'description': 'Premium model with stronger reasoning capabilities.',
+                            'is_active': True,
+                            'is_premium': True,
+                            'is_available_for_current_user': False,
+                            'created_at': '2026-01-01T10:00:00Z',
+                            'updated_at': '2026-01-01T10:00:00Z',
+                        },
+                    ],
+                },
+                response_only=True,
+                status_codes=['200'],
+            )
+        ],
     ),
     retrieve=extend_schema(
         tags=['AI Models'],
@@ -166,7 +207,7 @@ class AIModelViewSet(viewsets.ModelViewSet):
     list=extend_schema(
         tags=['Assistants'],
         summary='List public assistants and current user private assistants',
-        responses={200: AssistantSerializer},
+        responses={200: AssistantSerializer(many=True)},
     ),
     retrieve=extend_schema(
         tags=['Assistants'],
@@ -248,7 +289,7 @@ class AssistantViewSet(PublicOrOwnerAssistantQuerySetMixin, viewsets.ModelViewSe
     list=extend_schema(
         tags=['Conversations'],
         summary='List current user conversations',
-        responses={200: ConversationSerializer},
+        responses={200: ConversationSerializer(many=True)},
     ),
     retrieve=extend_schema(
         tags=['Conversations'],
@@ -335,7 +376,7 @@ class ConversationViewSet(
     tags=['Projects'],
     summary='List conversations for a specific project',
     responses={
-        200: ConversationSerializer,
+        200: ConversationSerializer(many=True),
         404: OpenApiResponse(description='Project not found.'),
     },
 )

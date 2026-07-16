@@ -100,6 +100,18 @@ Implemented:
 - Swagger documentation for main resources
 - API tests for CRUD and data isolation
 
+### Phase 5 - AI Models and Initial Data Seeding
+
+Implemented:
+
+- `seed_initial_data` management command
+- Default AI models
+- Default public assistants
+- Default subscription plans
+- Idempotent initial data creation
+- AI model availability flag in API response
+- Tests for initial data seeding
+
 ---
 
 ## Project Structure
@@ -133,12 +145,18 @@ web_practice3/
 │   └── wsgi.py
 │
 ├── core/
+│   ├── management/
+│   │   ├── __init__.py
+│   │   └── commands/
+│   │       ├── __init__.py
+│   │       └── seed_initial_data.py
 │   ├── migrations/
 │   ├── admin.py
 │   ├── apps.py
 │   ├── mixins.py
 │   ├── models.py
 │   ├── permissions.py
+│   ├── test_seed_initial_data.py
 │   ├── tests.py
 │   └── views.py
 │
@@ -202,6 +220,7 @@ pip install -r requirements.txt
 ```powershell
 python manage.py check
 python manage.py migrate
+python manage.py seed_initial_data
 python manage.py runserver
 ```
 
@@ -209,6 +228,45 @@ Project URL:
 
 ```text
 http://127.0.0.1:8000/
+```
+
+---
+
+## Initial Data Seeding
+
+To create default AI models, public assistants, and subscription plans, run:
+
+```powershell
+python manage.py seed_initial_data
+```
+
+This command is idempotent, so it can be executed multiple times without creating duplicate records.
+
+It creates default AI models:
+
+```text
+GPT-3.5
+GPT-4
+Claude-3
+Llama-3
+```
+
+It creates default public assistants:
+
+```text
+General Assistant
+Coding Assistant
+Translator Assistant
+Academic Writing Assistant
+Literary Critic
+```
+
+It creates default subscription plans:
+
+```text
+Free Plan
+Premium Monthly
+Premium Yearly
 ```
 
 ---
@@ -404,6 +462,7 @@ However, the following files should be committed:
 - source code files
 - app folders
 - migration files
+- management commands
 - `requirements.txt`
 - `README.md`
 - `.env.example`
@@ -428,6 +487,12 @@ python manage.py makemigrations
 
 ```powershell
 python manage.py migrate
+```
+
+### Seed initial data
+
+```powershell
+python manage.py seed_initial_data
 ```
 
 ### Run development server
@@ -460,28 +525,30 @@ python manage.py test core
 python manage.py test chats
 ```
 
+### Run Phase 5 seed tests
+
+```powershell
+python manage.py test core.test_seed_initial_data
+```
+
 ---
 
-## Phase 4 Checklist
+## Phase 5 Checklist
 
 Before moving to the next phase, the following items must be completed:
 
-- [ ] `chats/serializers.py` is created
-- [ ] `chats/views.py` is updated
-- [ ] `chats/urls.py` is created
-- [ ] `config/urls.py` includes chat API routes
-- [ ] Project CRUD API works
-- [ ] AI Model read access works for authenticated users
-- [ ] AI Model write access is admin-only
-- [ ] Assistant CRUD API works
-- [ ] Normal users cannot create public assistants
-- [ ] Conversation CRUD API works
-- [ ] Conversation delete is soft delete
-- [ ] Project conversations endpoint works
-- [ ] Swagger shows CRUD endpoints
+- [ ] `core/management/commands/seed_initial_data.py` is created
+- [ ] default AI models are seeded
+- [ ] default public assistants are seeded
+- [ ] default subscription plans are seeded
+- [ ] seed command is idempotent
+- [ ] `AIModelSerializer` includes `is_available_for_current_user`
+- [ ] seed command tests are added
 - [ ] `python manage.py check` runs successfully
-- [ ] `python manage.py test chats` runs successfully
-- [ ] Phase 4 is committed and pushed to git
+- [ ] `python manage.py test core.test_seed_initial_data` runs successfully
+- [ ] `python manage.py seed_initial_data` runs successfully
+- [ ] Swagger still works correctly
+- [ ] Phase 5 is committed and pushed to git
 
 ---
 
@@ -490,7 +557,7 @@ Before moving to the next phase, the following items must be completed:
 The next phase is:
 
 ```text
-Phase 5 - AI Models and Initial Data Seeding
+Phase 6 - Custom Assistants and Assistant Selection Improvements
 ```
 
-In Phase 5, default AI models and initial data will be prepared so the system can be tested more easily through Swagger and API calls.
+In Phase 6, assistant-related APIs and validations will be improved further, and assistant selection behavior in conversations will be made more complete.

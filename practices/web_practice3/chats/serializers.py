@@ -1,3 +1,5 @@
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import AIModel, Assistant, Conversation, Project
@@ -48,7 +50,12 @@ class AIModelSerializer(serializers.ModelSerializer):
 
     Normal users can read AI models.
     Only staff/superusers can create, update, or delete them.
+
+    The field is_available_for_current_user shows whether the authenticated
+    user can actually select this model in a conversation.
     """
+
+    is_available_for_current_user = serializers.SerializerMethodField()
 
     class Meta:
         model = AIModel
@@ -59,14 +66,25 @@ class AIModelSerializer(serializers.ModelSerializer):
             'description',
             'is_active',
             'is_premium',
+            'is_available_for_current_user',
             'created_at',
             'updated_at',
         )
         read_only_fields = (
             'id',
+            'is_available_for_current_user',
             'created_at',
             'updated_at',
         )
+
+    @extend_schema_field(OpenApiTypes.BOOL)
+    def get_is_available_for_current_user(self, obj):
+        request = self.context.get('request')
+
+        if request is None:
+            return False
+
+        return obj.is_available_to(request.user)
 
     def validate_name(self, value):
         value = value.strip()
